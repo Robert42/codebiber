@@ -20,20 +20,25 @@ fn find(code: &str) -> Result<Section_List>
   let mut lines = smallvec![];
 
   use Rule::*;
-  use Section::*;
 
-  let result = Section_Parser::parse(Rule::file, code)?;
+  let result = Section_Parser::parse(file, code)?;
   for r in result
   {
     match r.as_rule()
     {
-      line => lines.push(HANDWRITTEN(r.as_str())),
+      line => lines.push(parse_line(r)?),
       EOI => (),
       _ => unimplemented!("{:?}", r.as_rule()),
     }
-    println!("{r:?}");
   }
   Ok(lines)
+}
+
+fn parse_line(node: crate::pest::iterators::Pair<Rule>) -> Result<Section>
+{
+  use Section::*;
+
+  return Ok(HANDWRITTEN(node.as_str()))
 }
 
 pub type Result<T=(), E=Error> = std::result::Result<T, E>;
