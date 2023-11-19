@@ -78,6 +78,6 @@ mod test
   {
     let mut result = Section_Parser::parse(Rule::line, code)?;
 
-    super::parse_line(result.next().unwrap().into_inner().next().unwrap())
+    super::parse(result.next().unwrap().into_inner().next().unwrap())
   }
 }

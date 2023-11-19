@@ -2,7 +2,6 @@ use super::*;
 
 #[cfg(test)]
 mod line;
-use line::{parse as parse_line, Line};
 
 #[derive(Parser)]
 #[grammar = "find/section_grammar.pest"]
@@ -14,8 +13,6 @@ pub type Syntax_Error = crate::pest::error::Error<Rule>;
 
 pub fn parse(code: &str) -> Result<Section_List>
 {
-  use Section::*;
-
   let mut sections = smallvec![];
 
   let result = Section_Parser::parse(Rule::file, code)?;
@@ -23,12 +20,7 @@ pub fn parse(code: &str) -> Result<Section_List>
   {
     match r.as_rule()
     {
-      Rule::line => match parse_line(r.into_inner().next().unwrap())?
-      {
-        Line::CODE(content) => sections.push(HANDWRITTEN(content)),
-        Line::BEGIN_CODEGEN{..} => todo!(),
-        Line::END_CODEGEN{..} => todo!(),
-      },
+      Rule::section => sections.push(parse_section(r)?),
       Rule::EOI => (),
       _ => unimplemented!("{:?}", r.as_rule()),
     }
@@ -79,9 +71,9 @@ mod test
   #[test]
   fn trivial() -> Result
   {
-    assert_eq!(find("")?, smallvec![HANDWRITTEN("")] as Section_List);
+    assert_eq!(find("")?, smallvec![] as Section_List);
     assert_eq!(find("xyz")?, smallvec![HANDWRITTEN("xyz")] as Section_List);
-    assert_eq!(find("xyz\nuvw")?, smallvec![HANDWRITTEN("xyz"), HANDWRITTEN("uvw")] as Section_List);
+    assert_eq!(find("xyz\nuvw")?, smallvec![HANDWRITTEN("xyz\nuvw")] as Section_List);
     /*
     assert_eq!(find("// << codegen foo >>\n// << /codegen >>\n")?, smallvec![
       CODEGEN{

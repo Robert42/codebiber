@@ -1,4 +1,4 @@
-file = _{ SOI ~ (line ~ NEWLINE)* ~ line ~ EOI}
+file = _{ SOI ~ section* ~ EOI}
 
 section = { code | generated }
 generated = { begin_marker_line ~ NEWLINE ~ code ~ end_marker_line }
