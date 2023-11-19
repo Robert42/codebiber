@@ -1,15 +1,17 @@
 file = _{ SOI ~ (line ~ NEWLINE)* ~ line ~ EOI}
 
-line = { begin_marker_line | code_line }
+line = { begin_marker_line | end_marker_line | code_line }
 
 code_line = { any_char* }
 begin_marker_line = { indentation ~ before_marker ~ "<<" ~ s* ~ "codegen" ~ s+ ~ identifier ~ s* ~ ">>" ~ after_marker }
+end_marker_line = { indentation ~ before_marker ~ "<<" ~ s* ~ "/codegen" ~ s+ ~ checksum ~ s* ~ ">>" ~ after_marker }
 
 before_marker = { (!"<<" ~ any_char)* }
 after_marker = { any_char* }
 
 indentation = @{ s* }
 identifier = @{ !ASCII_DIGIT ~ ("_" | ASCII_ALPHANUMERIC)+ }
+checksum = @{ ASCII_HEX_DIGIT* }
 
 s = _{ " " }
 any_char = _{ !NEWLINE ~ ANY }

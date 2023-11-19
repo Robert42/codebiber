@@ -31,6 +31,7 @@ fn find(code: &str) -> Result<Section_List>
       {
         Line::CODE(content) => lines.push(HANDWRITTEN(content)),
         Line::BEGIN_CODEGEN{..} => todo!(),
+        Line::END_CODEGEN{..} => todo!(),
       },
       EOI => (),
       _ => unimplemented!("{:?}", r.as_rule()),
@@ -44,6 +45,7 @@ enum Line<'a>
 {
   CODE(&'a str),
   BEGIN_CODEGEN{marker: Marker<'a>, identifier: &'a str,},
+  END_CODEGEN{marker: Marker<'a>, checksum: &'a str,},
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -57,7 +59,7 @@ struct Marker<'a>
 fn parse_line(node: crate::pest::iterators::Pair<Rule>) -> Result<Line>
 {
   use Line::*;
-  use Rule::{code_line, begin_marker_line};
+  use Rule::{code_line, begin_marker_line, end_marker_line};
 
   let l = match node.as_rule()
   {
@@ -66,6 +68,11 @@ fn parse_line(node: crate::pest::iterators::Pair<Rule>) -> Result<Line>
     {
       let (marker, identifier) = parse_marker(node.into_inner());
       Line::BEGIN_CODEGEN{marker, identifier}
+    }
+    end_marker_line =>
+    {
+      let (marker, checksum) = parse_marker(node.into_inner());
+      Line::END_CODEGEN{marker, checksum}
     }
     _ => unimplemented!("{:?}", node.as_rule()),
   };
@@ -88,7 +95,7 @@ fn parse_marker(mut xs: crate::pest::iterators::Pairs<Rule>) -> (Marker, &str)
   
   let identifier = match identifier.as_rule()
   {
-    Rule::identifier => identifier.as_str(),
+    Rule::identifier | Rule::checksum => identifier.as_str(),
     _ => unreachable!("{}", identifier.as_str()),
   };
 
@@ -145,6 +152,7 @@ mod test
     assert_eq!(parse_line("")?, Line::CODE(""));
     assert_eq!(parse_line("xyz")?, Line::CODE("xyz"));
     assert_eq!(parse_line("  // << codegen foo >> let's go!")?, Line::BEGIN_CODEGEN{identifier: "foo", marker: Marker{indentation: 2, before_marker: "// ", after_marker: " let's go!"}});
+    assert_eq!(parse_line("  // << /codegen f00ba >> nice!")?, Line::END_CODEGEN{checksum: "f00ba", marker: Marker{indentation: 2, before_marker: "// ", after_marker: " nice!"}});
 
     Ok(())
   }
