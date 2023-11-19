@@ -1,7 +1,7 @@
 use super::*;
 
+#[cfg(test)]
 mod line;
-
 use line::{parse as parse_line, Line};
 
 #[derive(Parser)]
@@ -15,22 +15,21 @@ pub type Syntax_Error = crate::pest::error::Error<Rule>;
 pub fn parse(code: &str) -> Result<Section_List>
 {
   use Section::*;
-  use Rule::*;
 
   let mut sections = smallvec![];
 
-  let result = Section_Parser::parse(file, code)?;
+  let result = Section_Parser::parse(Rule::file, code)?;
   for r in result
   {
     match r.as_rule()
     {
-      line => match parse_line(r.into_inner().next().unwrap())?
+      Rule::line => match parse_line(r.into_inner().next().unwrap())?
       {
         Line::CODE(content) => sections.push(HANDWRITTEN(content)),
         Line::BEGIN_CODEGEN{..} => todo!(),
         Line::END_CODEGEN{..} => todo!(),
       },
-      EOI => (),
+      Rule::EOI => (),
       _ => unimplemented!("{:?}", r.as_rule()),
     }
   }
@@ -38,11 +37,44 @@ pub fn parse(code: &str) -> Result<Section_List>
   Ok(sections)
 }
 
+fn parse_section(node: crate::pest::iterators::Pair<Rule>) -> Result<Section>
+{
+  debug_assert_eq!(node.as_rule(), Rule::section);
+  
+  let node = node.into_inner().next().unwrap();
+  let s = match node.as_rule()
+  {
+    Rule::code => Section::HANDWRITTEN(node.as_str()),
+    Rule::generated => todo!(),
+    _ => unreachable!(),
+  };
+
+  Ok(s)
+}
+
 #[cfg(test)]
 mod test
 {
   use super::*;
   use Section::*;
+  
+  #[test]
+  fn test_parse_section() -> Result
+  {
+    assert!(parse_section("").is_err());
+    assert_eq!(parse_section("xyz")?, HANDWRITTEN("xyz"));
+    assert_eq!(parse_section("x\ny\nz")?, HANDWRITTEN("x\ny\nz"));
+    assert_eq!(parse_section("x\ny\n")?, HANDWRITTEN("x\ny\n"));
+
+    Ok(())
+  }
+
+  fn parse_section(code: &str) -> Result<Section>
+  {
+    let mut result = Section_Parser::parse(Rule::section, code)?;
+  
+    super::parse_section(result.next().unwrap())
+  }
   
   #[test]
   fn trivial() -> Result
