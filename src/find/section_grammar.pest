@@ -3,7 +3,7 @@ file = _{ SOI ~ section* ~ EOI}
 section = { code | generated }
 generated = { begin_marker_line ~ NEWLINE ~ optional_code ~ end_marker_line ~ NEWLINE? }
 optional_code = { code? }
-code = @{ (!marker_line ~ any_char* ~ NEWLINE)+ ~ !marker_line ~ any_char* | !marker_line ~ any_char+ }
+code = @{ (!marker_line ~ any_char* ~ NEWLINE)+ ~ (!marker_line ~ any_char+)? | !marker_line ~ any_char+ }
 
 marker_line = { begin_marker_line | end_marker_line }
 begin_marker_line = { indentation ~ before_marker ~ "<<" ~ s* ~ "codegen" ~ s+ ~ identifier ~ s* ~ ">>" ~ after_marker }

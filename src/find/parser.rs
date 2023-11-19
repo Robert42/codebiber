@@ -103,22 +103,33 @@ mod test
         },
       },
     ] as Section_List);
-    /*
-    {
-      /* NOCEHCKIN
-      let code = "xyz\n  // << codegen blub >>\n  uvw\n  // << /codegen >>\nabc";
-      assert_eq!(
-        finder.find(code).unwrap(),
-        &[
-          HANDWRITTEN(0..loc(code, 1, 2)),
-          BEGIN_CODEGEN(2, loc(code, 1, 2)..loc(code, 2, 0)),
-          GENERATED(loc(code, 2, 0)..loc(code, 3, 2)),
-          END_CODEGEN(2, loc(code, 3, 2)..loc(code, 4, 0)),
-          HANDWRITTEN(loc(code, 4, 0)..loc(code, 4, 3)),
-        ]);
-        */
-    }
-    */
+  }
+  
+  #[test]
+  fn test_with_code_section()
+  {
+    let code = "x\ny\nz\n  // << codegen blub >>\n  uvw\n // << /codegen >>\nabc";
+    assert_eq!(
+      find(code).pretty_unwrap(),
+      smallvec![
+        HANDWRITTEN("x\ny\nz\n"),
+        CODEGEN{
+          identifier: "blub",
+          code: "  uvw\n",
+          checksum: None,
+          begin: Marker{
+            indentation: 2,
+            before_marker: "// ",
+            after_marker: "",
+          },
+          end: Marker{
+            indentation: 1,
+            before_marker: "// ",
+            after_marker: "",
+          },
+        },
+        HANDWRITTEN("abc"),
+      ] as Section_List);
   }
 }
 
