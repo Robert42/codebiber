@@ -4,9 +4,10 @@ line = { code_line | begin_marker_line | end_marker_line }
 
 section = { code | generated }
 generated = { begin_marker_line ~ NEWLINE ~ code ~ end_marker_line }
-code = @{ (code_line ~ NEWLINE)+ ~ code_line | !begin_marker_line ~ !end_marker_line ~ any_char+ }
+code = @{ (code_line ~ NEWLINE)+ ~ code_line | !marker_line ~ any_char+ }
 
-code_line = { !begin_marker_line ~ !end_marker_line ~ any_char* }
+marker_line = { begin_marker_line | end_marker_line }
+code_line = { !marker_line ~ any_char* }
 begin_marker_line = { indentation ~ before_marker ~ "<<" ~ s* ~ "codegen" ~ s+ ~ identifier ~ s* ~ ">>" ~ after_marker }
 end_marker_line = { indentation ~ before_marker ~ "<<" ~ s* ~ "/codegen" ~ s+ ~ checksum ~ s* ~ ">>" ~ after_marker }
 
