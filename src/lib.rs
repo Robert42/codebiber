@@ -2,6 +2,7 @@
 #![cfg(test)]
 
 mod find;
+pub mod gen;
 
 pub mod pretty_unwrap;
 use pretty_unwrap::Pretty_Unwrap;
