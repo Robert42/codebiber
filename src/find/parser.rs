@@ -42,7 +42,19 @@ fn parse_section(node: crate::pest::iterators::Pair<Rule>) -> Result<Section>
       let code = xs.next().unwrap().as_str();
       let (end, checksum) = line::parse_end_marker(xs.next().unwrap());
     
-      let checksum = parse_checksum(checksum)?;
+      let checksum = parse_checksum(checksum);
+      let checksum = match checksum.len()
+      {
+        0 => None,
+        n => {
+          let actual_hashsum = blake3::hash(code.as_bytes());
+          if &actual_hashsum.as_bytes()[..n] != checksum.as_slice()
+          {
+            todo!("checksum mismatch!");
+          }
+          Some(actual_hashsum)
+        }
+      };
 
       Section::CODEGEN { identifier, code, checksum, begin, end }
     }
@@ -52,13 +64,35 @@ fn parse_section(node: crate::pest::iterators::Pair<Rule>) -> Result<Section>
   Ok(s)
 }
 
-fn parse_checksum(checksum: &str) -> Result<Option<blake3::Hash>>
+fn parse_checksum(checksum: &str) -> ArrayVec<u8, 32>
 {
-  match checksum.as_bytes()
+  debug_assert!(checksum.len() <= 64, "I expect the parser to guarantee 32 less hex digits!\n{checksum:?}");
+  debug_assert_eq!(checksum.len()%2, 0, "I expect the parser to guarantee that");
+
+  let mut xs = ArrayVec::<u8, 32>::new();
+  let (checksum_bytes, _) = checksum.as_bytes().as_chunks::<2>();
+  for &digit_pair in checksum_bytes
   {
-    [] => Ok(None),
-    _ => Ok(Some(blake3::Hash::from_hex(checksum)?)),
+    xs.push(u8_from_hex(digit_pair));
   }
+  xs
+}
+
+fn hex_digit(digit: u8) -> u8
+{
+  match digit
+  {
+    b'0' ..= b'9' => digit - b'0',
+    b'a' ..= b'f' => digit - b'a' + 10,
+    b'A' ..= b'F' => digit - b'A' + 10,
+    _ => unreachable!("{digit:?}"),
+  }
+}
+
+fn u8_from_hex(digits: [u8; 2]) -> u8
+{
+  debug_assert!(digits[0].is_ascii_hexdigit() && digits[1].is_ascii_hexdigit());
+  (hex_digit(digits[0])<<4) | hex_digit(digits[1])
 }
 
 #[cfg(test)]
@@ -140,12 +174,18 @@ mod test
   #[test]
   fn test_checksum()
   {
-    assert_eq!(parse_checksum("").pretty_unwrap(), None);
-    assert_eq!(parse_checksum("x").is_err(), true);
-    assert_eq!(parse_checksum("42").is_err(), true);
+    assert_eq!(hex_digit(b'0'), 0);
+    assert_eq!(hex_digit(b'9'), 9);
+    assert_eq!(hex_digit(b'a'), 10);
+    assert_eq!(hex_digit(b'f'), 15);
+    assert_eq!(hex_digit(b'A'), 10);
+    assert_eq!(hex_digit(b'F'), 15);
+    assert_eq!(u8_from_hex([b'4', b'2']), 0x42);
+
+    assert_eq!(parse_checksum("").as_slice(), &[]);
 
     let checksum = blake3::hash(b"42");
-    assert_eq!(parse_checksum(checksum.to_string().as_str()).pretty_unwrap(), Some(checksum));
+    assert_eq!(parse_checksum(checksum.to_string().as_str()).as_slice(), checksum.as_bytes());
   }
 
   use Indentation as I;

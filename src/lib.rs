@@ -1,3 +1,4 @@
+#![feature(slice_as_chunks)]
 #![allow(non_camel_case_types)]
 #![cfg(test)]
 
@@ -9,6 +10,9 @@ pub mod pretty_unwrap;
 use pretty_unwrap::Pretty_Unwrap;
 
 extern crate blake3;
+
+extern crate arrayvec;
+use arrayvec::ArrayVec;
 
 extern crate pest;
 #[macro_use]

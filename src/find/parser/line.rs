@@ -85,7 +85,7 @@ mod test
     assert_eq!(parse_line("")?, Line::CODE(""));
     assert_eq!(parse_line("xyz")?, Line::CODE("xyz"));
     assert_eq!(parse_line("  // << codegen foo >> let's go!")?, Line::BEGIN_CODEGEN{identifier: "foo", marker: Marker{indentation, before_marker: "// ", after_marker: " let's go!"}});
-    assert_eq!(parse_line("  // << /codegen f00ba >> nice!")?, Line::END_CODEGEN{checksum: "f00ba", marker: Marker{indentation, before_marker: "// ", after_marker: " nice!"}});
+    assert_eq!(parse_line("  // << /codegen f00baa >> nice!")?, Line::END_CODEGEN{checksum: "f00baa", marker: Marker{indentation, before_marker: "// ", after_marker: " nice!"}});
 
     Ok(())
   }
