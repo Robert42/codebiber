@@ -43,7 +43,7 @@ where F: Fn(&str, &mut String) -> std::fmt::Result<>
         write!(&mut generated, "{i}{before}<< codegen {ident} >>{after}\n", i=begin.indentation, before=begin.before_marker, after=begin.after_marker, ident=identifier)?;
         
         let generated_begin = generated.len();
-        f("TODO: pass identifier", &mut generated)?;
+        f(identifier, &mut generated)?;
         if generated.as_bytes().last().copied() != Some(b'\n')
         {
           generated += "\n";
@@ -98,6 +98,17 @@ mod test
     assert_eq!(generate("<< codegen foo >>\nxyz\n<< /codegen >>", CFG, |_,x| write!(x, "uvw")).pretty_unwrap(), Some("<< codegen foo >>\nuvw\n<< /codegen >>\n".to_owned()));
     assert_eq!(generate("<< codegen foo >>\nremove me\n<< /codegen >>", CFG, |_,_| Ok(())).pretty_unwrap(), Some("<< codegen foo >>\n<< /codegen >>\n".to_owned()));
     assert_eq!(generate("abc\ndefg<< codegen foo >>hijk\nxyz\nlmnop<< /codegen >>qrst\nuvw", CFG, |_,x| write!(x, "uvw")).pretty_unwrap(), Some("abc\ndefg<< codegen foo >>hijk\nuvw\nlmnop<< /codegen >>qrst\nuvw".to_owned()));
+  }
+
+  #[test]
+  fn test_use_identifier()
+  {
+    assert_eq!(generate("<< codegen answer >>\n<< /codegen >>\n<< codegen finestructure_constant >>\n<< /codegen >>", CFG,
+      |i,x| match i {
+        "answer" => write!(x, "42"),
+        "finestructure_constant" => write!(x, "137"),
+        _ => unreachable!("{i}"),
+      }).pretty_unwrap(), Some("<< codegen answer >>\n42\n<< /codegen >>\n<< codegen finestructure_constant >>\n137\n<< /codegen >>\n".to_owned()));
   }
 }
 
