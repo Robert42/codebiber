@@ -28,7 +28,7 @@ fn find(code: &str) -> Result<Section_List>
     {
       line => match parse_line(r.into_inner().next().unwrap())?
       {
-        Line::HANDWRITTEN(content) => lines.push(HANDWRITTEN(content)),
+        Line::CODE(content) => lines.push(HANDWRITTEN(content)),
       },
       EOI => (),
       _ => unimplemented!("{:?}", r.as_rule()),
@@ -39,7 +39,7 @@ fn find(code: &str) -> Result<Section_List>
 
 enum Line<'a>
 {
-  HANDWRITTEN(&'a str),
+  CODE(&'a str),
 }
 
 fn parse_line(node: crate::pest::iterators::Pair<Rule>) -> Result<Line>
@@ -49,7 +49,7 @@ fn parse_line(node: crate::pest::iterators::Pair<Rule>) -> Result<Line>
 
   let l = match node.as_rule()
   {
-    handwritten => HANDWRITTEN(node.as_str()),
+    code_line => CODE(node.as_str()),
     _ => unimplemented!("{:?}", node.as_rule()),
   };
 
