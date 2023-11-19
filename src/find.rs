@@ -4,7 +4,7 @@ use super::*;
 pub enum Section<'a>
 {
   HANDWRITTEN(&'a str),
-  CODEGEN{indentation: usize, ident: &'a str, begin: &'a str, generated: &'a str, end: &'a str},
+  CODEGEN{indentation: usize, identifier: &'a str, checksum: u64, begin: Marker<'a>, end: Marker<'a>},
 }
 use Section::*;
 
@@ -14,7 +14,7 @@ struct Section_Parser
 {
 }
 
-type Section_List<'a> = SmallVec<[Section<'a> ; 8]>;
+pub type Section_List<'a> = SmallVec<[Section<'a> ; 8]>;
 
 fn find(code: &str) -> Result<Section_List>
 {
@@ -49,11 +49,11 @@ enum Line<'a>
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct Marker<'a>
+pub struct Marker<'a>
 {
-  indentation: usize,
-  before_marker: &'a str,
-  after_marker: &'a str,
+  pub indentation: usize,
+  pub before_marker: &'a str,
+  pub after_marker: &'a str,
 }
 
 fn parse_line(node: crate::pest::iterators::Pair<Rule>) -> Result<Line>
