@@ -52,12 +52,10 @@ where F: Fn(&str, &mut String) -> std::fmt::Result<>
 
         let new_checksum = blake3::hash(new_code.as_bytes());
 
-        if cfg.store_checksum
+        match cfg.store_checksum
         {
-          write!(&mut generated, "{i}{before}<< /codegen {checksum} >>{after}\n", i=end.indentation, before=end.before_marker, after=end.after_marker, checksum=new_checksum)?;
-        }else
-        {
-          write!(&mut generated, "{i}{before}<< /codegen >>{after}\n", i=end.indentation, before=end.before_marker, after=end.after_marker)?;
+          true  => write!(&mut generated, "{i}{before}<< /codegen {checksum} >>{after}\n", i=end.indentation, before=end.before_marker, after=end.after_marker, checksum=new_checksum)?,
+          false => write!(&mut generated, "{i}{before}<< /codegen >>{after}\n",            i=end.indentation, before=end.before_marker, after=end.after_marker)?,
         }
 
         changed = changed || new_checksum != old_checksum;
