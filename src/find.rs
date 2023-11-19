@@ -26,7 +26,7 @@ fn find(code: &str) -> Result<Section_List>
   {
     match r.as_rule()
     {
-      line => match parse_line(r)?
+      line => match parse_line(r.into_inner().next().unwrap())?
       {
         Line::HANDWRITTEN(content) => lines.push(HANDWRITTEN(content)),
       },
@@ -45,8 +45,15 @@ enum Line<'a>
 fn parse_line(node: crate::pest::iterators::Pair<Rule>) -> Result<Line>
 {
   use Line::*;
+  use Rule::*;
 
-  return Ok(HANDWRITTEN(node.as_str()))
+  let l = match node.as_rule()
+  {
+    handwritten => HANDWRITTEN(node.as_str()),
+    _ => unimplemented!("{:?}", node.as_rule()),
+  };
+
+  return Ok(l);
 }
 
 pub type Result<T=(), E=Error> = std::result::Result<T, E>;

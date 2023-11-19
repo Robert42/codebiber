@@ -1,5 +1,6 @@
 file = _{ SOI ~ (line ~ NEWLINE)* ~ line ~ EOI}
 
-line = { any_char* }
+line = { handwritten }
 
+handwritten = { any_char* }
 any_char = _{ !NEWLINE ~ ANY }
