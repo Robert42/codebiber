@@ -43,7 +43,15 @@ fn find(code: &str) -> Result<Section_List>
 enum Line<'a>
 {
   CODE(&'a str),
-  BEGIN_CODEGEN{indentation: u32, identifier: &'a str, before_marker: &'a str, after_marker: &'a str},
+  BEGIN_CODEGEN{marker: Marker<'a>, identifier: &'a str,},
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Marker<'a>
+{
+  indentation: usize,
+  before_marker: &'a str,
+  after_marker: &'a str,
 }
 
 fn parse_line(node: crate::pest::iterators::Pair<Rule>) -> Result<Line>
@@ -56,30 +64,38 @@ fn parse_line(node: crate::pest::iterators::Pair<Rule>) -> Result<Line>
     code_line => CODE(node.as_str()),
     begin_marker_line =>
     {
-      let mut xs = node.into_inner();
-      let indentation = xs.next().unwrap();
-      let before_marker = xs.next().unwrap();
-      let identifier = xs.next().unwrap();
-      let after_marker = xs.next().unwrap();
-
-      debug_assert_eq!(indentation.as_rule(), Rule::indentation);
-      let indentation = indentation.as_str().len() as u32; // TODO catch?
-
-      debug_assert_eq!(before_marker.as_rule(), Rule::before_marker);
-      let before_marker = before_marker.as_str();
-      
-      debug_assert_eq!(identifier.as_rule(), Rule::identifier);
-      let identifier = identifier.as_str();
-
-      debug_assert_eq!(after_marker.as_rule(), Rule::after_marker);
-      let after_marker = after_marker.as_str();
-
-      Line::BEGIN_CODEGEN{indentation, before_marker, identifier, after_marker}
+      let (marker, identifier) = parse_marker(node.into_inner());
+      Line::BEGIN_CODEGEN{marker, identifier}
     }
     _ => unimplemented!("{:?}", node.as_rule()),
   };
 
   return Ok(l);
+}
+
+fn parse_marker(mut xs: crate::pest::iterators::Pairs<Rule>) -> (Marker, &str)
+{
+  let indentation = xs.next().unwrap();
+  let before_marker = xs.next().unwrap();
+  let identifier = xs.next().unwrap();
+  let after_marker = xs.next().unwrap();
+
+  debug_assert_eq!(indentation.as_rule(), Rule::indentation);
+  let indentation = indentation.as_str().len() as usize;
+
+  debug_assert_eq!(before_marker.as_rule(), Rule::before_marker);
+  let before_marker = before_marker.as_str();
+  
+  let identifier = match identifier.as_rule()
+  {
+    Rule::identifier => identifier.as_str(),
+    _ => unreachable!("{}", identifier.as_str()),
+  };
+
+  debug_assert_eq!(after_marker.as_rule(), Rule::after_marker);
+  let after_marker = after_marker.as_str();
+
+  (Marker{indentation, before_marker, after_marker}, identifier)
 }
 
 pub type Result<T=(), E=Error> = std::result::Result<T, E>;
@@ -128,7 +144,7 @@ mod test
   {
     assert_eq!(parse_line("")?, Line::CODE(""));
     assert_eq!(parse_line("xyz")?, Line::CODE("xyz"));
-    assert_eq!(parse_line("  // << codegen foo >> let's go!")?, Line::BEGIN_CODEGEN{indentation: 2, identifier: "foo", before_marker: "// ", after_marker: " let's go!"});
+    assert_eq!(parse_line("  // << codegen foo >> let's go!")?, Line::BEGIN_CODEGEN{identifier: "foo", marker: Marker{indentation: 2, before_marker: "// ", after_marker: " let's go!"}});
 
     Ok(())
   }
