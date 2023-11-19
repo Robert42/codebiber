@@ -7,7 +7,7 @@ pub use parser::parse as find;
 pub enum Section<'a>
 {
   HANDWRITTEN(&'a str),
-  CODEGEN{indentation: usize, identifier: &'a str, checksum: Option<blake3::Hash>, begin: Marker<'a>, end: Marker<'a>},
+  CODEGEN{indentation: usize, identifier: &'a str, code: &'a str, checksum: Option<blake3::Hash>, begin: Marker<'a>, end: Marker<'a>},
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

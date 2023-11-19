@@ -51,7 +51,24 @@ mod test
     assert_eq!(find("xyz")?, smallvec![HANDWRITTEN("xyz")] as Section_List);
     assert_eq!(find("xyz\nuvw")?, smallvec![HANDWRITTEN("xyz"), HANDWRITTEN("uvw")] as Section_List);
     /*
-    assert_eq!(find("// << codegen foo >>\n// << /codegen >>\n")?, smallvec![CODEGEN{indentation: 0, ident: "foo", begin:"// << codegen foo >>\n", generated:"", end:"// << /codegen >>\n"}] as Section_List);
+    assert_eq!(find("// << codegen foo >>\n// << /codegen >>\n")?, smallvec![
+      CODEGEN{
+        indentation: 0,
+        identifier: "foo",
+        code: "",
+        checksum: None,
+        begin: Marker{
+          indentation: 0,
+          before_marker: "// ",
+          after_marker: "",
+        },
+        end: Marker{
+          indentation: 0,
+          before_marker: "// ",
+          after_marker: "",
+        },
+      },
+    ] as Section_List);
     {
       /* NOCEHCKIN
       let code = "xyz\n  // << codegen blub >>\n  uvw\n  // << /codegen >>\nabc";
