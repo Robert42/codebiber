@@ -18,12 +18,12 @@ pub fn parse(node: crate::pest::iterators::Pair<Rule>) -> Result<Line>
     code_line => CODE(node.as_str()),
     begin_marker_line =>
     {
-      let (marker, identifier) = parse_marker(node.into_inner());
+      let (marker, identifier) = parse_marker(node);
       Line::BEGIN_CODEGEN{marker, identifier}
     }
     end_marker_line =>
     {
-      let (marker, checksum) = parse_marker(node.into_inner());
+      let (marker, checksum) = parse_marker(node);
       Line::END_CODEGEN{marker, checksum}
     }
     _ => unimplemented!("{:?}", node.as_rule()),
@@ -32,8 +32,23 @@ pub fn parse(node: crate::pest::iterators::Pair<Rule>) -> Result<Line>
   return Ok(l);
 }
 
-fn parse_marker(mut xs: crate::pest::iterators::Pairs<Rule>) -> (Marker, &str)
+pub fn parse_begin_marker(node: crate::pest::iterators::Pair<Rule>) -> (Marker, &str)
 {
+  debug_assert!(node.as_rule() == Rule::begin_marker_line);
+  return parse_marker(node);
+}
+
+pub fn parse_end_marker(node: crate::pest::iterators::Pair<Rule>) -> (Marker, &str)
+{
+  debug_assert!(node.as_rule() == Rule::end_marker_line);
+  return parse_marker(node);
+}
+
+fn parse_marker(node: crate::pest::iterators::Pair<Rule>) -> (Marker, &str)
+{
+  debug_assert!(node.as_rule() == Rule::begin_marker_line || node.as_rule() == Rule::end_marker_line);
+  let mut xs = node.into_inner();
+
   let indentation = xs.next().unwrap();
   let before_marker = xs.next().unwrap();
   let identifier = xs.next().unwrap();

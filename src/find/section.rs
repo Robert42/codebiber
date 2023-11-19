@@ -4,7 +4,7 @@ use super::*;
 pub enum Section<'a>
 {
   HANDWRITTEN(&'a str),
-  CODEGEN{indentation: usize, identifier: &'a str, code: &'a str, checksum: Option<blake3::Hash>, begin: Marker<'a>, end: Marker<'a>},
+  CODEGEN{identifier: &'a str, code: &'a str, checksum: Option<blake3::Hash>, begin: Marker<'a>, end: Marker<'a>},
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

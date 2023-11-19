@@ -1,6 +1,5 @@
 use super::*;
 
-#[cfg(test)]
 mod line;
 
 #[derive(Parser)]
@@ -37,7 +36,20 @@ fn parse_section(node: crate::pest::iterators::Pair<Rule>) -> Result<Section>
   let s = match node.as_rule()
   {
     Rule::code => Section::HANDWRITTEN(node.as_str()),
-    Rule::generated => todo!(),
+    Rule::generated => {
+      let mut xs = node.into_inner();
+      let (begin, identifier) = line::parse_begin_marker(xs.next().unwrap());
+      let code = xs.next().unwrap().as_str();
+      let (end, checksum) = line::parse_end_marker(xs.next().unwrap());
+    
+      let checksum = match checksum.as_bytes()
+      {
+        [] => None,
+        _ => todo!(),
+      };
+
+      Section::CODEGEN { identifier, code, checksum, begin, end }
+    }
     _ => unreachable!(),
   };
 
@@ -69,15 +81,13 @@ mod test
   }
   
   #[test]
-  fn trivial() -> Result
+  fn trivial()
   {
-    assert_eq!(find("")?, smallvec![] as Section_List);
-    assert_eq!(find("xyz")?, smallvec![HANDWRITTEN("xyz")] as Section_List);
-    assert_eq!(find("xyz\nuvw")?, smallvec![HANDWRITTEN("xyz\nuvw")] as Section_List);
-    /*
-    assert_eq!(find("// << codegen foo >>\n// << /codegen >>\n")?, smallvec![
+    assert_eq!(find("").unwrap(), smallvec![] as Section_List);
+    assert_eq!(find("xyz").unwrap(), smallvec![HANDWRITTEN("xyz")] as Section_List);
+    assert_eq!(find("xyz\nuvw").unwrap(), smallvec![HANDWRITTEN("xyz\nuvw")] as Section_List);
+    assert_eq!(find("// << codegen foo >>\n// << /codegen >>\n").unwrap(), smallvec![
       CODEGEN{
-        indentation: 0,
         identifier: "foo",
         code: "",
         checksum: None,
@@ -93,11 +103,12 @@ mod test
         },
       },
     ] as Section_List);
+    /*
     {
       /* NOCEHCKIN
       let code = "xyz\n  // << codegen blub >>\n  uvw\n  // << /codegen >>\nabc";
       assert_eq!(
-        finder.find(code)?,
+        finder.find(code).unwrap(),
         &[
           HANDWRITTEN(0..loc(code, 1, 2)),
           BEGIN_CODEGEN(2, loc(code, 1, 2)..loc(code, 2, 0)),
@@ -108,8 +119,6 @@ mod test
         */
     }
     */
-
-    Ok(())
   }
 }
 
