@@ -61,34 +61,7 @@ fn parse_marker(mut xs: crate::pest::iterators::Pairs<Rule>) -> (Marker, &str)
 mod test
 {
   use super::*;
-  
-  #[test]
-  fn trivial() -> Result
-  {
-    assert_eq!(find("")?, smallvec![HANDWRITTEN("")] as Section_List);
-    assert_eq!(find("xyz")?, smallvec![HANDWRITTEN("xyz")] as Section_List);
-    assert_eq!(find("xyz\nuvw")?, smallvec![HANDWRITTEN("xyz"), HANDWRITTEN("uvw")] as Section_List);
-    /*
-    assert_eq!(find("// << codegen foo >>\n// << /codegen >>\n")?, smallvec![CODEGEN{indentation: 0, ident: "foo", begin:"// << codegen foo >>\n", generated:"", end:"// << /codegen >>\n"}] as Section_List);
-    {
-      /* NOCEHCKIN
-      let code = "xyz\n  // << codegen blub >>\n  uvw\n  // << /codegen >>\nabc";
-      assert_eq!(
-        finder.find(code)?,
-        &[
-          HANDWRITTEN(0..loc(code, 1, 2)),
-          BEGIN_CODEGEN(2, loc(code, 1, 2)..loc(code, 2, 0)),
-          GENERATED(loc(code, 2, 0)..loc(code, 3, 2)),
-          END_CODEGEN(2, loc(code, 3, 2)..loc(code, 4, 0)),
-          HANDWRITTEN(loc(code, 4, 0)..loc(code, 4, 3)),
-        ]);
-        */
-    }
-    */
 
-    Ok(())
-  }
-  
   #[test]
   fn lines() -> Result
   {
