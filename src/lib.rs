@@ -2,7 +2,6 @@
 #![cfg(test)]
 
 mod find;
-pub mod loc;
 
 pub mod pretty_unwrap;
 use pretty_unwrap::Pretty_Unwrap;
