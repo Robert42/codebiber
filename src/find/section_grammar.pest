@@ -4,7 +4,7 @@ line = { code_line | begin_marker_line | end_marker_line }
 
 section = { code | generated }
 generated = { begin_marker_line ~ NEWLINE ~ code ~ end_marker_line }
-code = @{ (code_line ~ NEWLINE)+ ~ code_line | !marker_line ~ any_char+ }
+code = @{ (any_char* ~ NEWLINE)+ ~ any_char* | !marker_line ~ any_char+ }
 
 marker_line = { begin_marker_line | end_marker_line }
 code_line = { !marker_line ~ any_char* }
