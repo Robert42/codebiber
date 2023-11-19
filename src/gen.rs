@@ -44,7 +44,7 @@ where F: Fn(&str, &mut String) -> std::fmt::Result<>
         
         let generated_begin = generated.len();
         f("TODO: pass identifier", &mut generated)?;
-        if generated.as_bytes().last().copied() != Some(b'\n') /* TODO: && generated.len()!=generated_begin*/
+        if generated.as_bytes().last().copied() != Some(b'\n')
         {
           generated += "\n";
         }
@@ -96,6 +96,7 @@ mod test
   {
     assert_eq!(generate("<< codegen foo >>\nxyz\n<< /codegen >>", CFG, |_,x| write!(x, "xyz")).pretty_unwrap(), None);
     assert_eq!(generate("<< codegen foo >>\nxyz\n<< /codegen >>", CFG, |_,x| write!(x, "uvw")).pretty_unwrap(), Some("<< codegen foo >>\nuvw\n<< /codegen >>\n".to_owned()));
+    assert_eq!(generate("<< codegen foo >>\nremove me\n<< /codegen >>", CFG, |_,_| Ok(())).pretty_unwrap(), Some("<< codegen foo >>\n<< /codegen >>\n".to_owned()));
     assert_eq!(generate("abc\ndefg<< codegen foo >>hijk\nxyz\nlmnop<< /codegen >>qrst\nuvw", CFG, |_,x| write!(x, "uvw")).pretty_unwrap(), Some("abc\ndefg<< codegen foo >>hijk\nuvw\nlmnop<< /codegen >>qrst\nuvw".to_owned()));
   }
 }
