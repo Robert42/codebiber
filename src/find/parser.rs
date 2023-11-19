@@ -97,12 +97,12 @@ mod test
         code: "",
         checksum: None,
         begin: Marker{
-          indentation: 0,
+          indentation: I(0),
           before_marker: "// ",
           after_marker: "",
         },
         end: Marker{
-          indentation: 0,
+          indentation: I(0),
           before_marker: "// ",
           after_marker: "",
         },
@@ -123,12 +123,12 @@ mod test
           code: "  uvw\n",
           checksum: None,
           begin: Marker{
-            indentation: 2,
+            indentation: I(2),
             before_marker: "// ",
             after_marker: "",
           },
           end: Marker{
-            indentation: 1,
+            indentation: I(1),
             before_marker: "// ",
             after_marker: "",
           },
@@ -147,6 +147,9 @@ mod test
     let checksum = blake3::hash(b"42");
     assert_eq!(parse_checksum(checksum.to_string().as_str()).pretty_unwrap(), Some(checksum));
   }
+
+  use Indentation as I;
 }
 
 use crate::pest::Parser;
+use crate::indentation::Indentation;

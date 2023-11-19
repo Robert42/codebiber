@@ -10,9 +10,10 @@ pub enum Section<'a>
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Marker<'a>
 {
-  pub indentation: usize,
+  pub indentation: Indentation,
   pub before_marker: &'a str,
   pub after_marker: &'a str,
 }
 
 pub type Section_List<'a> = SmallVec<[Section<'a> ; 8]>;
+use crate::indentation::Indentation;

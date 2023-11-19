@@ -40,11 +40,7 @@ where F: Fn(&str, &mut String) -> std::fmt::Result<>
           blake3::hash(old_code.as_bytes())
         };
 
-        for _ in 0..begin.indentation
-        {
-          generated += " ";
-        }
-        write!(&mut generated, "{before}<< codegen {ident} >>{after}\n", before=begin.before_marker, after=begin.after_marker, ident=identifier)?;
+        write!(&mut generated, "{i}{before}<< codegen {ident} >>{after}\n", i=begin.indentation, before=begin.before_marker, after=begin.after_marker, ident=identifier)?;
         
         let generated_begin = generated.len();
         f("TODO: pass identifier", &mut generated)?;
@@ -56,16 +52,12 @@ where F: Fn(&str, &mut String) -> std::fmt::Result<>
 
         let new_checksum = blake3::hash(new_code.as_bytes());
 
-        for _ in 0..end.indentation
-        {
-          generated += " ";
-        }
         if cfg.store_checksum
         {
-          write!(&mut generated, "{before}<< /codegen {checksum} >>{after}\n", before=end.before_marker, after=end.after_marker, checksum=new_checksum)?;
+          write!(&mut generated, "{i}{before}<< /codegen {checksum} >>{after}\n", i=end.indentation, before=end.before_marker, after=end.after_marker, checksum=new_checksum)?;
         }else
         {
-          write!(&mut generated, "{before}<< /codegen >>{after}\n", before=end.before_marker, after=end.after_marker)?;
+          write!(&mut generated, "{i}{before}<< /codegen >>{after}\n", i=end.indentation, before=end.before_marker, after=end.after_marker)?;
         }
 
         changed = changed || new_checksum != old_checksum;

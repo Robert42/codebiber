@@ -55,7 +55,7 @@ fn parse_marker(node: crate::pest::iterators::Pair<Rule>) -> (Marker, &str)
   let after_marker = xs.next().unwrap();
 
   debug_assert_eq!(indentation.as_rule(), Rule::indentation);
-  let indentation = indentation.as_str().len() as usize;
+  let indentation = Indentation(indentation.as_str().len());
 
   debug_assert_eq!(before_marker.as_rule(), Rule::before_marker);
   let before_marker = before_marker.as_str();
@@ -80,10 +80,12 @@ mod test
   #[test]
   fn lines() -> Result
   {
+    let indentation = I(2);
+
     assert_eq!(parse_line("")?, Line::CODE(""));
     assert_eq!(parse_line("xyz")?, Line::CODE("xyz"));
-    assert_eq!(parse_line("  // << codegen foo >> let's go!")?, Line::BEGIN_CODEGEN{identifier: "foo", marker: Marker{indentation: 2, before_marker: "// ", after_marker: " let's go!"}});
-    assert_eq!(parse_line("  // << /codegen f00ba >> nice!")?, Line::END_CODEGEN{checksum: "f00ba", marker: Marker{indentation: 2, before_marker: "// ", after_marker: " nice!"}});
+    assert_eq!(parse_line("  // << codegen foo >> let's go!")?, Line::BEGIN_CODEGEN{identifier: "foo", marker: Marker{indentation, before_marker: "// ", after_marker: " let's go!"}});
+    assert_eq!(parse_line("  // << /codegen f00ba >> nice!")?, Line::END_CODEGEN{checksum: "f00ba", marker: Marker{indentation, before_marker: "// ", after_marker: " nice!"}});
 
     Ok(())
   }
@@ -95,4 +97,6 @@ mod test
 
     super::parse(result.next().unwrap().into_inner().next().unwrap())
   }
+
+  use Indentation as I;
 }

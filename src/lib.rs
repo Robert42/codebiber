@@ -2,6 +2,7 @@
 #![cfg(test)]
 
 mod find;
+mod indentation;
 pub mod gen;
 
 pub mod pretty_unwrap;
