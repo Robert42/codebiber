@@ -2,6 +2,7 @@ pub trait Pretty_Unwrap
 {
   type Inner;
 
+  #[track_caller]
   fn pretty_unwrap(self) -> Self::Inner;
 }
 
