@@ -13,4 +13,6 @@ pub enum Error
 {
   #[error("syntax error: {0}")]
   SYNTAX(#[from] parser::Syntax_Error),
+  #[error("invalid blake3 checksum: {0}")]
+  INVALID_CHECKSUM(#[from] blake3::HexError),
 }

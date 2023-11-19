@@ -42,11 +42,7 @@ fn parse_section(node: crate::pest::iterators::Pair<Rule>) -> Result<Section>
       let code = xs.next().unwrap().as_str();
       let (end, checksum) = line::parse_end_marker(xs.next().unwrap());
     
-      let checksum = match checksum.as_bytes()
-      {
-        [] => None,
-        _ => todo!(),
-      };
+      let checksum = parse_checksum(checksum)?;
 
       Section::CODEGEN { identifier, code, checksum, begin, end }
     }
@@ -54,6 +50,15 @@ fn parse_section(node: crate::pest::iterators::Pair<Rule>) -> Result<Section>
   };
 
   Ok(s)
+}
+
+fn parse_checksum(checksum: &str) -> Result<Option<blake3::Hash>>
+{
+  match checksum.as_bytes()
+  {
+    [] => Ok(None),
+    _ => Ok(Some(blake3::Hash::from_hex(checksum)?)),
+  }
 }
 
 #[cfg(test)]
@@ -106,7 +111,7 @@ mod test
   }
   
   #[test]
-  fn test_with_code_section()
+  fn test_multiple_sections()
   {
     let code = "x\ny\nz\n  // << codegen blub >>\n  uvw\n // << /codegen >>\nabc";
     assert_eq!(
@@ -130,6 +135,17 @@ mod test
         },
         HANDWRITTEN("abc"),
       ] as Section_List);
+  }
+  
+  #[test]
+  fn test_checksum()
+  {
+    assert_eq!(parse_checksum("").pretty_unwrap(), None);
+    assert_eq!(parse_checksum("x").is_err(), true);
+    assert_eq!(parse_checksum("42").is_err(), true);
+
+    let checksum = blake3::hash(b"42");
+    assert_eq!(parse_checksum(checksum.to_string().as_str()).pretty_unwrap(), Some(checksum));
   }
 }
 
