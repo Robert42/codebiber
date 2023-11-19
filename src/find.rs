@@ -30,6 +30,7 @@ fn find(code: &str) -> Result<Section_List>
       line => match parse_line(r.into_inner().next().unwrap())?
       {
         Line::CODE(content) => lines.push(HANDWRITTEN(content)),
+        Line::BEGIN_CODEGEN{..} => todo!(),
       },
       EOI => (),
       _ => unimplemented!("{:?}", r.as_rule()),
@@ -42,16 +43,39 @@ fn find(code: &str) -> Result<Section_List>
 enum Line<'a>
 {
   CODE(&'a str),
+  BEGIN_CODEGEN{indentation: u32, identifier: &'a str, before_marker: &'a str, after_marker: &'a str},
 }
 
 fn parse_line(node: crate::pest::iterators::Pair<Rule>) -> Result<Line>
 {
   use Line::*;
-  use Rule::*;
+  use Rule::{code_line, begin_marker_line};
 
   let l = match node.as_rule()
   {
     code_line => CODE(node.as_str()),
+    begin_marker_line =>
+    {
+      let mut xs = node.into_inner();
+      let indentation = xs.next().unwrap();
+      let before_marker = xs.next().unwrap();
+      let identifier = xs.next().unwrap();
+      let after_marker = xs.next().unwrap();
+
+      debug_assert_eq!(indentation.as_rule(), Rule::indentation);
+      let indentation = indentation.as_str().len() as u32; // TODO catch?
+
+      debug_assert_eq!(before_marker.as_rule(), Rule::before_marker);
+      let before_marker = before_marker.as_str();
+      
+      debug_assert_eq!(identifier.as_rule(), Rule::identifier);
+      let identifier = identifier.as_str();
+
+      debug_assert_eq!(after_marker.as_rule(), Rule::after_marker);
+      let after_marker = after_marker.as_str();
+
+      Line::BEGIN_CODEGEN{indentation, before_marker, identifier, after_marker}
+    }
     _ => unimplemented!("{:?}", node.as_rule()),
   };
 
@@ -104,6 +128,7 @@ mod test
   {
     assert_eq!(parse_line("")?, Line::CODE(""));
     assert_eq!(parse_line("xyz")?, Line::CODE("xyz"));
+    assert_eq!(parse_line("  // << codegen foo >> let's go!")?, Line::BEGIN_CODEGEN{indentation: 2, identifier: "foo", before_marker: "// ", after_marker: " let's go!"});
 
     Ok(())
   }
