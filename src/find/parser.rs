@@ -46,14 +46,7 @@ fn parse_section(node: crate::pest::iterators::Pair<Rule>) -> Result<Section>
       let checksum = match checksum.len()
       {
         0 => None,
-        n => {
-          let actual_hashsum = blake3::hash(code.as_bytes());
-          if &actual_hashsum.as_bytes()[..n] != checksum.as_slice()
-          {
-            todo!("checksum mismatch!");
-          }
-          Some(actual_hashsum)
-        }
+        _ => Some(check_code_checksum(code, checksum)?),
       };
 
       Section::CODEGEN { identifier, code, checksum, begin, end }
@@ -62,6 +55,17 @@ fn parse_section(node: crate::pest::iterators::Pair<Rule>) -> Result<Section>
   };
 
   Ok(s)
+}
+
+fn check_code_checksum(code: &str, loaded_checksam: ArrayVec<u8, 32>) -> Result<blake3::Hash>
+{
+  let actual_hashsum = blake3::hash(code.as_bytes());
+  if &actual_hashsum.as_bytes()[..loaded_checksam.len()] != loaded_checksam.as_slice()
+  {
+    return Err(Error::WRONG_CHECKSUM(actual_hashsum));
+  }
+
+  return Ok(actual_hashsum);
 }
 
 fn parse_checksum(checksum: &str) -> ArrayVec<u8, 32>
@@ -186,6 +190,14 @@ mod test
 
     let checksum = blake3::hash(b"42");
     assert_eq!(parse_checksum(checksum.to_string().as_str()).as_slice(), checksum.as_bytes());
+  }
+  
+  #[test]
+  fn test_check_checksum()
+  {
+    assert_eq!(check_code_checksum("42", blake3::hash(b"42").as_bytes().iter().copied().collect()), Ok(blake3::hash(b"42")));
+    assert_eq!(check_code_checksum("42", blake3::hash(b"42").as_bytes()[0..4].iter().copied().collect()), Ok(blake3::hash(b"42")));
+    assert_eq!(check_code_checksum("42", blake3::hash(b"42").as_bytes()[1..5].iter().copied().collect()), Err(Error::WRONG_CHECKSUM(blake3::hash(b"42"))));
   }
 
   use Indentation as I;

@@ -15,6 +15,8 @@ pub enum Error
   SYNTAX(#[from] parser::Syntax_Error),
   #[error("invalid blake3 checksum: {0}")]
   INVALID_CHECKSUM(#[from] blake3::HexError),
+  #[error("wrong blake3 checksum. Was the code modified in between?\nActual blake3 checksum: {0}")]
+  WRONG_CHECKSUM(blake3::Hash),
 }
 
 impl PartialEq for Error
@@ -24,9 +26,10 @@ impl PartialEq for Error
     use Error::*;
     match (self, other)
     {
-      (SYNTAX(a), SYNTAX(b)) => a.eq(b),
+      (SYNTAX(a), SYNTAX(b)) => a == b,
       (INVALID_CHECKSUM(a), INVALID_CHECKSUM(b)) => format!("{a}") == format!("{b}"),
-      (SYNTAX(_), _) | (INVALID_CHECKSUM(_), _) => false,
+      (WRONG_CHECKSUM(a), WRONG_CHECKSUM(b)) => a == b,
+      (SYNTAX(_), _) | (INVALID_CHECKSUM(_), _) | (WRONG_CHECKSUM(_), _) => false,
     }
   }
 }
