@@ -53,6 +53,22 @@ impl<'a> Line_Indenter<'a>
       if x == b'\n' { linebreaks.push(i+1); }
     }
 
+    // prevent trailing whitespace
+    {
+      let mut i = 0;
+      let mut j = 0;
+      while j < linebreaks.len()
+      {
+        if j+1 == linebreaks.len() || linebreaks[j]+1 != linebreaks[j+1]
+        {
+          linebreaks[i] = linebreaks[j];
+          i += 1;
+        }
+        j += 1;
+      }
+      linebreaks.truncate(i);
+    }
+
     let num_linebreaks = linebreaks.len();
 
     let src_cursor = bytes.len()-start;
@@ -142,6 +158,12 @@ mod test
   fn test_with_lienbreak()
   {
     assert_eq!(indent!(2, "x\ny\nz"), "  x\n  y\n  z");
+  }
+
+  #[test]
+  fn test_dont_add_trailing_whitespace()
+  {
+    assert_eq!(indent!(2, "x\n\ny\n\n\nz"), "  x\n\n  y\n\n\n  z");
   }
 }
 
