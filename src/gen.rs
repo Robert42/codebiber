@@ -156,16 +156,28 @@ mod test
       match n
       {
         "empty" => Ok(()),
+        "42" => write!(out, "42"),
+        "newline" => write!(out, "\n"),
+        "42_newline" => write!(out, "42\n"),
         n => todo!("{n}"),
       }
     }
 
+    // differenet lengths
     assert_eq!(generate("<< codegen empty >>\n<< /codegen >>", CKSM_0, gen).pretty_unwrap(), None);
     assert_eq!(generate("<< codegen empty >>\n<< /codegen af13 >>", CKSM_0, gen).pretty_unwrap(), Some("<< codegen empty >>\n<< /codegen >>\n".to_owned()));
     assert_eq!(generate("<< codegen empty >>\n<< /codegen af13 >>", CKSM_2, gen).pretty_unwrap(), None);
     assert_eq!(generate("<< codegen empty >>\n<< /codegen >>", CKSM_2, gen).pretty_unwrap(), Some("<< codegen empty >>\n<< /codegen af13 >>\n".to_owned()));
     assert_eq!(generate("<< codegen empty >>\n<< /codegen af13>>", CKSM_4, gen).pretty_unwrap(), Some("<< codegen empty >>\n<< /codegen af1349b9 >>\n".to_owned()));
     assert_eq!(generate("<< codegen empty >>\n<< /codegen af13>>", CKSM_5, gen).pretty_unwrap(), Some("<< codegen empty >>\n<< /codegen af1349b9f5 >>\n".to_owned()));
+
+    // replace content
+    assert_eq!(generate("<< codegen 42 >>\n<< /codegen af1349b9f5>>", CKSM_5, gen).pretty_unwrap(), Some("<< codegen 42 >>\n42\n<< /codegen a16072b1b0 >>\n".to_owned()));
+    assert_eq!(generate("<< codegen empty >>\n42\n<< /codegen a16072b1b0>>", CKSM_5, gen).pretty_unwrap(), Some("<< codegen empty >>\n<< /codegen af1349b9f5 >>\n".to_owned()));
+    
+    // newline handling
+    assert_eq!(generate("<< codegen 42_newline >>\n42\n<< /codegen a16072b1>>", CKSM_5, gen).pretty_unwrap(), Some("<< codegen 42_newline >>\n42\n<< /codegen a16072b1b0 >>\n".to_owned()));
+    assert_eq!(generate("<< codegen newline >>\n<< /codegen af1349b9f5>>", CKSM_5, gen).pretty_unwrap(), Some("<< codegen newline >>\n\n<< /codegen 295192ea1e >>\n".to_owned()));
   }
 }
 
