@@ -37,6 +37,8 @@ struct Line_Indenter<'a>
 
 fn indent_lines(bytes_buf: &mut Vec<u8>, start: usize, indentation: usize)
 {
+  if indentation == 0 || start == bytes_buf.len() {return;} // microoptimization
+
   assert!(bytes_buf.len() < u32::MAX as usize);
 
   let bytes = &bytes_buf[start..];
