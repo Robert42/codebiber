@@ -26,6 +26,7 @@ impl Indentation
         bytes: &mut bytes[rng],
         src_cursor: src_cursor,
         dst_cursor: dst_cursor,
+        indentation: self.0,
       };
 
       for i in (0..src_cursor).rev()
@@ -39,7 +40,7 @@ impl Indentation
         indenter.dst_cursor -= n;
         indenter.bytes.copy_within(src_rng, indenter.dst_cursor);
 
-        indenter.dst_cursor -= self.0;
+        indenter.dst_cursor -= indenter.indentation;
         for j in indenter.dst_cursor..indenter.dst_cursor+self.0 { indenter.bytes[j] = b' '; }
       }
 
@@ -47,7 +48,7 @@ impl Indentation
       indenter.dst_cursor -= n;
       indenter.src_cursor -= n;
       indenter.bytes.copy_within(indenter.src_cursor..indenter.src_cursor+n, indenter.dst_cursor);
-      indenter.dst_cursor -= self.0;
+      indenter.dst_cursor -= indenter.indentation;
       debug_assert_eq!(indenter.dst_cursor, 0, "{:?}", std::str::from_utf8(indenter.bytes).unwrap());
       for i in indenter.dst_cursor..indenter.dst_cursor+self.0 { indenter.bytes[i] = b' '; }
     }
@@ -73,6 +74,7 @@ struct Line_Indenter<'a>
   bytes: &'a mut [u8],
   dst_cursor: usize,
   src_cursor: usize,
+  indentation: usize,
 }
 
 impl<'a> Line_Indenter<'a>
