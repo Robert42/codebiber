@@ -10,22 +10,10 @@ impl Indentation
 
     let mut bytes = std::mem::take(text).into_bytes();
 
-    let num_linebreaks = bytes[rng.clone()].iter().copied().filter(|&x| x==b'\n').count();
-    let num_indentations = num_linebreaks + 1;
-
-    let src_cursor = bytes.len();
-    let dst_cursor = src_cursor + num_indentations * self.0;
-    bytes.resize(dst_cursor, b'#');
-
     {
-      let mut indenter = Line_Indenter{
-        bytes: &mut bytes[rng],
-        src_cursor,
-        dst_cursor,
-        indentation: self.0,
-      };
+      let mut indenter = Line_Indenter::new(&mut bytes, rng.start, self.0);
 
-      for i in (0..src_cursor).rev()
+      for i in (0..indenter.src_cursor).rev()
       {
         if indenter.bytes[i] == b'\n'
         {
@@ -65,6 +53,23 @@ struct Line_Indenter<'a>
 
 impl<'a> Line_Indenter<'a>
 {
+  fn new(bytes: &'a mut Vec<u8>, start: usize, indentation: usize) -> Self
+  {
+    let num_linebreaks = bytes[start..].iter().copied().filter(|&x| x==b'\n').count();
+    let num_indentations = num_linebreaks + 1;
+
+    let src_cursor = bytes.len();
+    let dst_cursor = src_cursor + num_indentations * indentation;
+    bytes.resize(dst_cursor, b'#');
+
+    Line_Indenter{
+      bytes: &mut bytes[start..],
+      src_cursor,
+      dst_cursor,
+      indentation,
+    }
+  }
+
   fn copy_content(&mut self, from: usize)
   {
     let n = self.src_cursor - from;
