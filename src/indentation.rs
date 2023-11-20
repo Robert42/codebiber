@@ -33,20 +33,11 @@ impl Indentation
       {
         if indenter.bytes[i] != b'\n' {continue;}
 
-        let n = indenter.src_cursor - i-1;
-        let src_rng = i+1..indenter.src_cursor;
-        indenter.src_cursor = i+1;
-
-        indenter.dst_cursor -= n;
-        indenter.bytes.copy_within(src_rng, indenter.dst_cursor);
-
+        indenter.copy_content(i+1);
         indenter.fill_indentation();
       }
 
-      let n = indenter.src_cursor;
-      indenter.dst_cursor -= n;
-      indenter.src_cursor -= n;
-      indenter.bytes.copy_within(indenter.src_cursor..indenter.src_cursor+n, indenter.dst_cursor);
+      indenter.copy_content(0);
       indenter.fill_indentation();
       debug_assert_eq!(indenter.dst_cursor, 0, "{:?}", std::str::from_utf8(indenter.bytes).unwrap());
     }
@@ -77,6 +68,16 @@ struct Line_Indenter<'a>
 
 impl<'a> Line_Indenter<'a>
 {
+  fn copy_content(&mut self, from: usize)
+  {
+    let n = self.src_cursor - from;
+    let src_rng = from..self.src_cursor;
+    self.src_cursor = from;
+
+    self.dst_cursor -= n;
+    self.bytes.copy_within(src_rng, self.dst_cursor);
+  }
+
   fn fill_indentation(&mut self)
   {
     self.dst_cursor -= self.indentation;
