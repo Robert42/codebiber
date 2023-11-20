@@ -44,11 +44,12 @@ struct Line_Indenter<'a>
 
 impl<'a> Line_Indenter<'a>
 {
-  fn new(bytes: &'a mut Vec<u8>, start: usize, indentation: usize) -> Self
+  fn new(bytes_buf: &'a mut Vec<u8>, start: usize, indentation: usize) -> Self
   {
+    let bytes = &bytes_buf[start..];
     let mut linebreaks = smallvec![];
     linebreaks.push(0);
-    for (i,&x) in bytes[start..].iter().enumerate()
+    for (i,&x) in bytes.iter().enumerate()
     {
       if x == b'\n' { linebreaks.push(i+1); }
     }
@@ -75,12 +76,12 @@ impl<'a> Line_Indenter<'a>
 
     let num_linebreaks = linebreaks.len();
 
-    let src_cursor = bytes.len()-start;
+    let src_cursor = bytes.len();
     let dst_cursor = src_cursor + num_linebreaks * indentation;
-    bytes.resize(dst_cursor, b'#');
+    bytes_buf.resize(start + dst_cursor, b'#');
 
     Line_Indenter{
-      bytes: &mut bytes[start..],
+      bytes: &mut bytes_buf[start..],
       linebreaks,
       src_cursor,
       dst_cursor,
@@ -139,6 +140,13 @@ mod test
     ($i:expr, $str:expr) => {
       crate::indentation::Indentation($i).indent_str($str).as_str()
     };
+    ($i:expr, $str:expr, $start_at:expr) => {
+      {
+        let mut xs : String = $str.to_string();
+        crate::indentation::Indentation($i).indent_subrange(&mut xs, $start_at .. );
+        xs
+      }
+    };
   }
 
   #[test]
@@ -173,6 +181,12 @@ mod test
   fn test_difficult_cases()
   {
     assert_eq!(indent!(2, "\nx"), "\n  x");
+  }
+
+  #[test]
+  fn only_indent_after_a_certain_index()
+  {
+    assert_eq!(indent!(2, "x\ny\nz\nu\nv\nw", 6), "x\ny\nz\n  u\n  v\n  w");
   }
 }
 
