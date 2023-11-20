@@ -68,6 +68,10 @@ impl<'a> Line_Indenter<'a>
       }
       linebreaks.truncate(i);
     }
+    if linebreaks.last().copied() == Some(bytes.len())
+    {
+      linebreaks.pop();
+    }
 
     let num_linebreaks = linebreaks.len();
 
@@ -164,6 +168,7 @@ mod test
   fn test_dont_add_trailing_whitespace()
   {
     assert_eq!(indent!(2, "x\n\ny\n\n\nz"), "  x\n\n  y\n\n\n  z");
+    assert_eq!(indent!(2, "x\n"), "  x\n");
   }
 }
 
