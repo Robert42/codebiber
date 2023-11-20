@@ -1,3 +1,5 @@
+use super::*;
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Indentation(pub usize);
 
@@ -11,7 +13,7 @@ impl Indentation
     let mut bytes = std::mem::take(text).into_bytes();
 
     {
-      let mut indenter = Line_Indenter::new(&mut bytes, rng.start, self.0);
+      let indenter = Line_Indenter::new(&mut bytes, rng.start, self.0);
       indenter.indent();
     }
 
@@ -34,6 +36,7 @@ impl Indentation
 struct Line_Indenter<'a>
 {
   bytes: &'a mut [u8],
+  linebreaks: SmallVec<[usize; 1024]>,
   dst_cursor: usize,
   src_cursor: usize,
   indentation: usize,
@@ -43,30 +46,35 @@ impl<'a> Line_Indenter<'a>
 {
   fn new(bytes: &'a mut Vec<u8>, start: usize, indentation: usize) -> Self
   {
-    let num_linebreaks = bytes[start..].iter().copied().filter(|&x| x==b'\n').count();
+    let mut linebreaks = smallvec![];
+    for (i,&x) in bytes[start..].iter().enumerate()
+    {
+      if x == b'\n' { linebreaks.push(i+1); }
+    }
+
+    let num_linebreaks = linebreaks.len();
     let num_indentations = num_linebreaks + 1;
 
-    let src_cursor = bytes.len();
+    let src_cursor = bytes.len()-start;
     let dst_cursor = src_cursor + num_indentations * indentation;
     bytes.resize(dst_cursor, b'#');
 
     Line_Indenter{
       bytes: &mut bytes[start..],
+      linebreaks,
       src_cursor,
       dst_cursor,
       indentation,
     }
   }
 
-  fn indent(&mut self)
+  fn indent(mut self)
   {
-    for i in (0..self.src_cursor).rev()
+    let linebreaks = std::mem::take(&mut self.linebreaks);
+    for &i in linebreaks.iter().rev()
     {
-      if self.bytes[i] == b'\n'
-      {
-        self.copy_content(i+1);
-        self.fill_indentation();
-      }
+      self.copy_content(i);
+      self.fill_indentation();
     }
 
     self.copy_content(0);
