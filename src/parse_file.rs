@@ -6,10 +6,10 @@ pub use section::{Section, Marker, Section_List};
 mod parser;
 pub use parser::parse as find;
 
-pub type Result<T=(), E=Error> = std::result::Result<T, E>;
+pub type Result<T=(), E=Parse_Error> = std::result::Result<T, E>;
 
 #[derive(Clone, Debug, Error)]
-pub enum Error
+pub enum Parse_Error
 {
   #[error("syntax error: {0}")]
   SYNTAX(#[from] parser::Syntax_Error),
@@ -17,11 +17,11 @@ pub enum Error
   INVALID_CHECKSUM(#[from] blake3::HexError),
 }
 
-impl PartialEq for Error
+impl PartialEq for Parse_Error
 {
   fn eq(&self, other: &Self) -> bool
   {
-    use Error::*;
+    use Parse_Error::*;
     match (self, other)
     {
       (SYNTAX(a), SYNTAX(b)) => a == b,
@@ -30,4 +30,4 @@ impl PartialEq for Error
     }
   }
 }
-impl Eq for Error {}
+impl Eq for Parse_Error {}
