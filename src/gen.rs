@@ -23,14 +23,14 @@ where F: Fn(&str, &mut String) -> std::fmt::Result<>
   let mut generated = String::with_capacity(input.len()+4096);
   let mut changed = false;
 
-  for &sec in sections.iter()
+  for sec in sections.iter()
   {
     match sec
     {
       HANDWRITTEN(code) => generated += code,
       CODEGEN { identifier, code: old_code, checksum: old_checksum, begin, end } =>
       {
-        let old_checksum = if let Some(old_checksum) = old_checksum
+        let old_checksum = if let &Some(old_checksum) = old_checksum
         {
           if blake3::hash(old_code.as_bytes()) != old_checksum {todo!()}
           old_checksum
