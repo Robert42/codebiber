@@ -3,7 +3,7 @@ use super::*;
 mod line;
 
 #[derive(Parser)]
-#[grammar = "find/section_grammar.pest"]
+#[grammar = "parse_file/section_grammar.pest"]
 pub struct Section_Parser
 {
 }

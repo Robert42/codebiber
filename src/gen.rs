@@ -1,6 +1,6 @@
 use super::*;
 
-use super::find::{find as parse_sections, Section};
+use super::parse_file::{find as parse_sections, Section};
 
 #[derive(Default)]
 pub struct Config
@@ -85,7 +85,7 @@ pub type Result<T=(), E=Error> = std::result::Result<T, E>;
 pub enum Error
 {
   #[error("{0}")]
-  FIND(#[from] crate::find::Error),
+  FIND(#[from] crate::parse_file::Error),
   #[error("fmt error: {0}")]
   FMT(#[from] std::fmt::Error),
   #[error("wrong blake3 checksum. Was the code modified in between?\nActual blake3 checksum: {0}")]
