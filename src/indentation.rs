@@ -5,7 +5,7 @@ pub struct Indentation(pub usize);
 
 impl Indentation
 {
-  pub fn indent_subrange(self, text: &mut String, rng: std::ops::RangeFrom<usize>)
+  pub fn indent_subrange(self, text: &mut String, rng: RangeFrom<usize>)
   {
     if rng.start == text.len() {return}
     // TODO: shrink the rng by one if it ends with a linebreak?
@@ -41,7 +41,7 @@ impl Indentation
         indenter.bytes.copy_within(src_rng, indenter.dst_cursor);
 
         indenter.dst_cursor -= indenter.indentation;
-        for j in indenter.dst_cursor..indenter.dst_cursor+self.0 { indenter.bytes[j] = b' '; }
+        fill_with_space(indenter.bytes, indenter.dst_cursor..indenter.dst_cursor+self.0);
       }
 
       let n = indenter.src_cursor;
@@ -50,7 +50,7 @@ impl Indentation
       indenter.bytes.copy_within(indenter.src_cursor..indenter.src_cursor+n, indenter.dst_cursor);
       indenter.dst_cursor -= indenter.indentation;
       debug_assert_eq!(indenter.dst_cursor, 0, "{:?}", std::str::from_utf8(indenter.bytes).unwrap());
-      for i in indenter.dst_cursor..indenter.dst_cursor+self.0 { indenter.bytes[i] = b' '; }
+      fill_with_space(indenter.bytes, indenter.dst_cursor..indenter.dst_cursor+self.0);
     }
 
     *text = unsafe{ String::from_utf8_unchecked(bytes) };
@@ -79,6 +79,11 @@ struct Line_Indenter<'a>
 
 impl<'a> Line_Indenter<'a>
 {
+}
+
+fn fill_with_space(bytes: &mut [u8], rng: Range<usize>)
+{
+  for i in rng { bytes[i] = b' '; }
 }
 
 impl fmt::Display for Indentation
@@ -125,3 +130,4 @@ mod test
 }
 
 use std::fmt::{self, Write};
+use std::ops::{Range, RangeFrom};
