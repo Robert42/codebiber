@@ -21,30 +21,33 @@ impl Indentation
 
     {
       let mut dst_cursor = dst_cursor;
-      let bytes = &mut bytes[rng];
+
+      let mut indenter = Line_Indenter{
+        bytes: &mut bytes[rng],
+      };
 
       for i in (0..src_cursor).rev()
       {
-        if bytes[i] != b'\n' {continue;}
+        if indenter.bytes[i] != b'\n' {continue;}
 
         let n = src_cursor - i-1;
         let src_rng = i+1..src_cursor;
         src_cursor = i+1;
 
         dst_cursor -= n;
-        bytes.copy_within(src_rng, dst_cursor);
+        indenter.bytes.copy_within(src_rng, dst_cursor);
 
         dst_cursor -= self.0;
-        for j in dst_cursor..dst_cursor+self.0 { bytes[j] = b' '; }
+        for j in dst_cursor..dst_cursor+self.0 { indenter.bytes[j] = b' '; }
       }
 
       let n = src_cursor;
       dst_cursor -= n;
       src_cursor -= n;
-      bytes.copy_within(src_cursor..src_cursor+n, dst_cursor);
+      indenter.bytes.copy_within(src_cursor..src_cursor+n, dst_cursor);
       dst_cursor -= self.0;
-      debug_assert_eq!(dst_cursor, 0, "{:?}", std::str::from_utf8(bytes).unwrap());
-      for i in dst_cursor..dst_cursor+self.0 { bytes[i] = b' '; }
+      debug_assert_eq!(dst_cursor, 0, "{:?}", std::str::from_utf8(indenter.bytes).unwrap());
+      for i in dst_cursor..dst_cursor+self.0 { indenter.bytes[i] = b' '; }
     }
 
     *text = unsafe{ String::from_utf8_unchecked(bytes) };
@@ -61,6 +64,15 @@ impl Indentation
     self.indent_string(&mut x);
     x
   }
+}
+
+struct Line_Indenter<'a>
+{
+  bytes: &'a mut [u8],
+}
+
+impl<'a> Line_Indenter<'a>
+{
 }
 
 impl fmt::Display for Indentation
