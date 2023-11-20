@@ -47,16 +47,16 @@ impl<'a> Line_Indenter<'a>
   fn new(bytes: &'a mut Vec<u8>, start: usize, indentation: usize) -> Self
   {
     let mut linebreaks = smallvec![];
+    linebreaks.push(0);
     for (i,&x) in bytes[start..].iter().enumerate()
     {
       if x == b'\n' { linebreaks.push(i+1); }
     }
 
     let num_linebreaks = linebreaks.len();
-    let num_indentations = num_linebreaks + 1;
 
     let src_cursor = bytes.len()-start;
-    let dst_cursor = src_cursor + num_indentations * indentation;
+    let dst_cursor = src_cursor + num_linebreaks * indentation;
     bytes.resize(dst_cursor, b'#');
 
     Line_Indenter{
@@ -77,8 +77,6 @@ impl<'a> Line_Indenter<'a>
       self.fill_indentation();
     }
 
-    self.copy_content(0);
-    self.fill_indentation();
     debug_assert_eq!(self.dst_cursor, 0, "{:?}", std::str::from_utf8(self.bytes).unwrap());
   }
 
