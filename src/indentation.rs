@@ -24,30 +24,32 @@ impl Indentation
 
       let mut indenter = Line_Indenter{
         bytes: &mut bytes[rng],
+        src_cursor: src_cursor,
+        dst_cursor: dst_cursor,
       };
 
       for i in (0..src_cursor).rev()
       {
         if indenter.bytes[i] != b'\n' {continue;}
 
-        let n = src_cursor - i-1;
-        let src_rng = i+1..src_cursor;
-        src_cursor = i+1;
+        let n = indenter.src_cursor - i-1;
+        let src_rng = i+1..indenter.src_cursor;
+        indenter.src_cursor = i+1;
 
-        dst_cursor -= n;
-        indenter.bytes.copy_within(src_rng, dst_cursor);
+        indenter.dst_cursor -= n;
+        indenter.bytes.copy_within(src_rng, indenter.dst_cursor);
 
-        dst_cursor -= self.0;
-        for j in dst_cursor..dst_cursor+self.0 { indenter.bytes[j] = b' '; }
+        indenter.dst_cursor -= self.0;
+        for j in indenter.dst_cursor..indenter.dst_cursor+self.0 { indenter.bytes[j] = b' '; }
       }
 
-      let n = src_cursor;
-      dst_cursor -= n;
-      src_cursor -= n;
-      indenter.bytes.copy_within(src_cursor..src_cursor+n, dst_cursor);
-      dst_cursor -= self.0;
-      debug_assert_eq!(dst_cursor, 0, "{:?}", std::str::from_utf8(indenter.bytes).unwrap());
-      for i in dst_cursor..dst_cursor+self.0 { indenter.bytes[i] = b' '; }
+      let n = indenter.src_cursor;
+      indenter.dst_cursor -= n;
+      indenter.src_cursor -= n;
+      indenter.bytes.copy_within(indenter.src_cursor..indenter.src_cursor+n, indenter.dst_cursor);
+      indenter.dst_cursor -= self.0;
+      debug_assert_eq!(indenter.dst_cursor, 0, "{:?}", std::str::from_utf8(indenter.bytes).unwrap());
+      for i in indenter.dst_cursor..indenter.dst_cursor+self.0 { indenter.bytes[i] = b' '; }
     }
 
     *text = unsafe{ String::from_utf8_unchecked(bytes) };
@@ -69,6 +71,8 @@ impl Indentation
 struct Line_Indenter<'a>
 {
   bytes: &'a mut [u8],
+  dst_cursor: usize,
+  src_cursor: usize,
 }
 
 impl<'a> Line_Indenter<'a>
