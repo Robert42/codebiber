@@ -30,7 +30,7 @@ impl Indentation
     x
   }
 
-  pub fn to_small_str(self) -> SmallString::<[u8; 32]>
+  pub fn to_small_str(self) -> SmallString::<[u8; 128]>
   {
     let mut xs = SmallString::new();
     xs.reserve(self.0);
