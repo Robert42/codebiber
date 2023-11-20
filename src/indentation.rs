@@ -7,15 +7,9 @@ impl Indentation
 {
   pub fn indent_subrange(self, text: &mut String, rng: RangeFrom<usize>)
   {
-    if rng.start == text.len() {return}
-    // TODO: shrink the rng by one if it ends with a linebreak?
-
     let mut bytes = std::mem::take(text).into_bytes();
 
-    {
-      let indenter = Line_Indenter::new(&mut bytes, rng.start, self.0);
-      indenter.indent();
-    }
+    indent_lines(&mut bytes, rng.start, self.0);
 
     *text = unsafe{ String::from_utf8_unchecked(bytes) };
   }
@@ -36,69 +30,63 @@ impl Indentation
 struct Line_Indenter<'a>
 {
   bytes: &'a mut [u8],
-  linebreaks: SmallVec<[usize; 1024]>,
   dst_cursor: usize,
   src_cursor: usize,
   indentation: usize,
 }
 
+fn indent_lines(bytes_buf: &mut Vec<u8>, start: usize, indentation: usize)
+{
+  let bytes = &bytes_buf[start..];
+  let mut linebreaks : SmallVec<[usize; 32768]> = smallvec![];
+  linebreaks.push(0);
+  for (i,&x) in bytes.iter().enumerate()
+  {
+    if x == b'\n' { linebreaks.push(i+1); }
+  }
+
+  // prevent trailing whitespace
+  {
+    let mut i = 0;
+    let mut j = 0;
+    while j < linebreaks.len()
+    {
+      if j+1 == linebreaks.len() || linebreaks[j]+1 != linebreaks[j+1]
+      {
+        linebreaks[i] = linebreaks[j];
+        i += 1;
+      }
+      j += 1;
+    }
+    linebreaks.truncate(i);
+  }
+  if linebreaks.last().copied() == Some(bytes.len())
+  {
+    linebreaks.pop();
+  }
+
+  let num_linebreaks = linebreaks.len();
+
+  let src_cursor = bytes.len();
+  let dst_cursor = src_cursor + num_linebreaks * indentation;
+  bytes_buf.resize(start + dst_cursor, b'#');
+
+  let mut indenter = Line_Indenter{
+    bytes: &mut bytes_buf[start..],
+    src_cursor,
+    dst_cursor,
+    indentation,
+  };
+
+  for &i in linebreaks.iter().rev()
+  {
+    indenter.copy_content(i);
+    indenter.fill_indentation();
+  }
+}
+
 impl<'a> Line_Indenter<'a>
 {
-  fn new(bytes_buf: &'a mut Vec<u8>, start: usize, indentation: usize) -> Self
-  {
-    let bytes = &bytes_buf[start..];
-    let mut linebreaks = smallvec![];
-    linebreaks.push(0);
-    for (i,&x) in bytes.iter().enumerate()
-    {
-      if x == b'\n' { linebreaks.push(i+1); }
-    }
-
-    // prevent trailing whitespace
-    {
-      let mut i = 0;
-      let mut j = 0;
-      while j < linebreaks.len()
-      {
-        if j+1 == linebreaks.len() || linebreaks[j]+1 != linebreaks[j+1]
-        {
-          linebreaks[i] = linebreaks[j];
-          i += 1;
-        }
-        j += 1;
-      }
-      linebreaks.truncate(i);
-    }
-    if linebreaks.last().copied() == Some(bytes.len())
-    {
-      linebreaks.pop();
-    }
-
-    let num_linebreaks = linebreaks.len();
-
-    let src_cursor = bytes.len();
-    let dst_cursor = src_cursor + num_linebreaks * indentation;
-    bytes_buf.resize(start + dst_cursor, b'#');
-
-    Line_Indenter{
-      bytes: &mut bytes_buf[start..],
-      linebreaks,
-      src_cursor,
-      dst_cursor,
-      indentation,
-    }
-  }
-
-  fn indent(mut self)
-  {
-    let linebreaks = std::mem::take(&mut self.linebreaks);
-    for &i in linebreaks.iter().rev()
-    {
-      self.copy_content(i);
-      self.fill_indentation();
-    }
-  }
-
   fn copy_content(&mut self, from: usize)
   {
     let n = self.src_cursor - from;
