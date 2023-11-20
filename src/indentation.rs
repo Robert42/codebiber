@@ -37,12 +37,14 @@ struct Line_Indenter<'a>
 
 fn indent_lines(bytes_buf: &mut Vec<u8>, start: usize, indentation: usize)
 {
+  assert!(bytes_buf.len() < u32::MAX as usize);
+
   let bytes = &bytes_buf[start..];
-  let mut linebreaks : SmallVec<[usize; 32768]> = smallvec![];
+  let mut linebreaks : SmallVec<[u32; 32768]> = smallvec![];
   linebreaks.push(0);
   for (i,&x) in bytes.iter().enumerate()
   {
-    if x == b'\n' { linebreaks.push(i+1); }
+    if x == b'\n' { linebreaks.push(i as u32+1); }
   }
 
   // prevent trailing whitespace
@@ -60,7 +62,7 @@ fn indent_lines(bytes_buf: &mut Vec<u8>, start: usize, indentation: usize)
     }
     linebreaks.truncate(i);
   }
-  if linebreaks.last().copied() == Some(bytes.len())
+  if linebreaks.last().copied() == Some(bytes.len() as u32)
   {
     linebreaks.pop();
   }
@@ -80,7 +82,7 @@ fn indent_lines(bytes_buf: &mut Vec<u8>, start: usize, indentation: usize)
 
   for &i in linebreaks.iter().rev()
   {
-    indenter.copy_content(i);
+    indenter.copy_content(i as usize);
     indenter.fill_indentation();
   }
 }
