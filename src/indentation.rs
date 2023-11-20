@@ -15,15 +15,21 @@ impl Indentation
     let num_linebreaks = bytes[rng.clone()].iter().copied().filter(|&x| x==b'\n').count();
     let num_indentations = num_linebreaks + 1;
 
-    let src_cursor = bytes.len();
-    let dst_cursor = src_cursor + num_indentations * self.0;
+    let mut src_cursor = bytes.len();
+    let mut dst_cursor = src_cursor + num_indentations * self.0;
     bytes.resize(dst_cursor, b'#');
 
     {
+      let mut dst_cursor = dst_cursor;
       let bytes = &mut bytes[rng];
 
-      bytes.copy_within(..src_cursor, dst_cursor-src_cursor);
-      for i in 0..self.0 { bytes[i] = b' '; }
+      let n = src_cursor;
+      dst_cursor -= n;
+      src_cursor -= n;
+      bytes.copy_within(src_cursor..src_cursor+n, dst_cursor);
+      dst_cursor -= self.0;
+      debug_assert_eq!(dst_cursor, 0);
+      for i in dst_cursor..dst_cursor+self.0 { bytes[i] = b' '; }
     }
 
     *text = unsafe{ String::from_utf8_unchecked(bytes) };
@@ -39,14 +45,6 @@ impl Indentation
     let mut x = text.to_owned();
     self.indent_string(&mut x);
     x
-  }
-
-  pub fn to_small_str(self) -> SmallString::<[u8; 128]>
-  {
-    let mut xs = SmallString::new();
-    xs.reserve(self.0);
-    write!(&mut xs, "{}", self).unwrap();
-    xs
   }
 }
 
@@ -83,6 +81,7 @@ mod test
   {
     assert_eq!(indent!(2, ""), "");
     assert_eq!(indent!(2, "x"), "  x");
+    assert_eq!(indent!(4, "Hello, World!"), "    Hello, World!");
   }
 }
 
