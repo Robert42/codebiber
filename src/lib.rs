@@ -9,8 +9,7 @@ pub mod gen;
 pub use process::{process_file, Process_Error as Error, Result};
 
 pub mod pretty_unwrap;
-#[cfg(test)]
-use pretty_unwrap::Pretty_Unwrap;
+pub use pretty_unwrap::Pretty_Unwrap;
 
 extern crate blake3;
 
