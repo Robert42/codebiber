@@ -36,8 +36,7 @@ where F: Fn(&str, &mut String) -> std::fmt::Result<>
         let old_checksum =
         {
           let actual_checksum = blake3::hash(old_code.as_bytes());
-          // BUG: checkum overwritten
-          changed = cfg.checksum_bytes_to_store as usize != old_checksum.len();
+          changed = changed || cfg.checksum_bytes_to_store as usize != old_checksum.len();
           actual_checksum
         };
 
@@ -170,7 +169,7 @@ mod test
     assert_eq!(generate("<< codegen empty >>\n<< /codegen >>", CKSM_2, gen).pretty_unwrap(), Some("<< codegen empty >>\n<< /codegen af13 >>\n".to_owned()));
     assert_eq!(generate("<< codegen empty >>\n<< /codegen af13>>", CKSM_4, gen).pretty_unwrap(), Some("<< codegen empty >>\n<< /codegen af1349b9 >>\n".to_owned()));
     assert_eq!(generate("<< codegen empty >>\n<< /codegen af13>>", CKSM_5, gen).pretty_unwrap(), Some("<< codegen empty >>\n<< /codegen af1349b9f5 >>\n".to_owned()));
-
+    
     // replace content
     assert_eq!(generate("<< codegen 42 >>\n<< /codegen af1349b9f5>>", CKSM_5, gen).pretty_unwrap(), Some("<< codegen 42 >>\n42\n<< /codegen a16072b1b0 >>\n".to_owned()));
     assert_eq!(generate("<< codegen empty >>\n42\n<< /codegen a16072b1b0>>", CKSM_5, gen).pretty_unwrap(), Some("<< codegen empty >>\n<< /codegen af1349b9f5 >>\n".to_owned()));
@@ -178,6 +177,9 @@ mod test
     // newline handling
     assert_eq!(generate("<< codegen 42_newline >>\n42\n<< /codegen a16072b1>>", CKSM_5, gen).pretty_unwrap(), Some("<< codegen 42_newline >>\n42\n<< /codegen a16072b1b0 >>\n".to_owned()));
     assert_eq!(generate("<< codegen newline >>\n<< /codegen af1349b9f5>>", CKSM_5, gen).pretty_unwrap(), Some("<< codegen newline >>\n\n<< /codegen 295192ea1e >>\n".to_owned()));
+
+    // bug: dirty flag overwritten:
+    assert_eq!(generate("<< codegen empty >>\n<< /codegen af13 >>\n<< codegen empty >>\n<< /codegen >>", CKSM_0, gen).pretty_unwrap(), Some("<< codegen empty >>\n<< /codegen >>\n<< codegen empty >>\n<< /codegen >>\n".to_owned()));
   }
 }
 
