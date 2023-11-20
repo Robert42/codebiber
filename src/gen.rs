@@ -5,12 +5,14 @@ use super::find::{find as parse_sections, Section};
 #[derive(Default)]
 pub struct Config
 {
-  pub store_checksum: bool,
+  pub checksum_bytes_to_store: u8,
 }
 
 pub fn generate<F>(input: &str, cfg: Config, f: F) -> Result<Option<String>>
 where F: Fn(&str, &mut String) -> std::fmt::Result<>
 {
+  debug_assert!(cfg.is_valid());
+
   use Section::*;
   let sections = parse_sections(input)?;
 
@@ -30,11 +32,12 @@ where F: Fn(&str, &mut String) -> std::fmt::Result<>
       HANDWRITTEN(code) => generated += code,
       CODEGEN { identifier, code: old_code, checksum: old_checksum, begin, end } =>
       {
-        check_code_checksum(old_code, old_checksum);
+        check_code_checksum(old_code, old_checksum)?;
         let old_checksum =
         {
           let actual_checksum = blake3::hash(old_code.as_bytes());
-          // changed = cfg.store_checksum;
+          // BUG: checkum overwritten
+          changed = cfg.checksum_bytes_to_store as usize != old_checksum.len();
           actual_checksum
         };
 
@@ -50,11 +53,12 @@ where F: Fn(&str, &mut String) -> std::fmt::Result<>
 
         let new_checksum = blake3::hash(new_code.as_bytes());
 
-        match cfg.store_checksum
+        write!(&mut generated, "{i}{before}<< /codegen ", i=end.indentation, before=end.before_marker)?;
+        if cfg.checksum_bytes_to_store > 0
         {
-          true  => write!(&mut generated, "{i}{before}<< /codegen {checksum} >>{after}\n", i=end.indentation, before=end.before_marker, after=end.after_marker, checksum=new_checksum)?,
-          false => write!(&mut generated, "{i}{before}<< /codegen >>{after}\n",            i=end.indentation, before=end.before_marker, after=end.after_marker)?,
+          write!(&mut generated, "{checksum} ", checksum=&new_checksum.to_hex()[0..2*cfg.checksum_bytes_to_store as usize])?;
         }
+        write!(&mut generated, ">>{after}\n", after=end.after_marker)?;
 
         changed = changed || new_checksum != old_checksum;
       }
@@ -88,12 +92,20 @@ pub enum Error
   WRONG_CHECKSUM(blake3::Hash),
 }
 
+impl Config
+{
+  pub fn is_valid(&self) -> bool
+  {
+    self.checksum_bytes_to_store <= 32
+  }
+}
+
 #[cfg(test)]
 mod test
 {
   use super::*;
 
-  const CFG : Config = Config{store_checksum: false};
+  const CFG : Config = Config{checksum_bytes_to_store: 0};
 
   #[test]
   fn test_trivial()
@@ -130,6 +142,32 @@ mod test
     assert_eq!(check_code_checksum("42", &blake3::hash(b"42").as_bytes()[0..4].iter().copied().collect()), Ok(blake3::hash(b"42")));
     assert_eq!(check_code_checksum("42", &blake3::hash(b"42").as_bytes()[1..5].iter().copied().collect()), Err(Error::WRONG_CHECKSUM(blake3::hash(b"42"))));
   }
+
+  #[test]
+  fn test_checksum()
+  {
+    const CKSM_0 : Config = Config{checksum_bytes_to_store: 0, .. CFG};
+    const CKSM_2 : Config = Config{checksum_bytes_to_store: 2, .. CFG};
+    const CKSM_4 : Config = Config{checksum_bytes_to_store: 4, .. CFG};
+    const CKSM_5 : Config = Config{checksum_bytes_to_store: 5, .. CFG};
+
+    fn gen(n: &str, out: &mut String) -> fmt::Result
+    {
+      match n
+      {
+        "empty" => Ok(()),
+        n => todo!("{n}"),
+      }
+    }
+
+    assert_eq!(generate("<< codegen empty >>\n<< /codegen >>", CKSM_0, gen).pretty_unwrap(), None);
+    assert_eq!(generate("<< codegen empty >>\n<< /codegen af13 >>", CKSM_0, gen).pretty_unwrap(), Some("<< codegen empty >>\n<< /codegen >>\n".to_owned()));
+    assert_eq!(generate("<< codegen empty >>\n<< /codegen af13 >>", CKSM_2, gen).pretty_unwrap(), None);
+    assert_eq!(generate("<< codegen empty >>\n<< /codegen >>", CKSM_2, gen).pretty_unwrap(), Some("<< codegen empty >>\n<< /codegen af13 >>\n".to_owned()));
+    assert_eq!(generate("<< codegen empty >>\n<< /codegen af13>>", CKSM_4, gen).pretty_unwrap(), Some("<< codegen empty >>\n<< /codegen af1349b9 >>\n".to_owned()));
+    assert_eq!(generate("<< codegen empty >>\n<< /codegen af13>>", CKSM_5, gen).pretty_unwrap(), Some("<< codegen empty >>\n<< /codegen af1349b9f5 >>\n".to_owned()));
+  }
 }
 
-use std::fmt::Write;
+use std::fmt;
+use fmt::Write;
