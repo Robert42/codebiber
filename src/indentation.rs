@@ -40,17 +40,15 @@ impl Indentation
         indenter.dst_cursor -= n;
         indenter.bytes.copy_within(src_rng, indenter.dst_cursor);
 
-        indenter.dst_cursor -= indenter.indentation;
-        fill_with_space(indenter.bytes, indenter.dst_cursor..indenter.dst_cursor+self.0);
+        indenter.fill_indentation();
       }
 
       let n = indenter.src_cursor;
       indenter.dst_cursor -= n;
       indenter.src_cursor -= n;
       indenter.bytes.copy_within(indenter.src_cursor..indenter.src_cursor+n, indenter.dst_cursor);
-      indenter.dst_cursor -= indenter.indentation;
+      indenter.fill_indentation();
       debug_assert_eq!(indenter.dst_cursor, 0, "{:?}", std::str::from_utf8(indenter.bytes).unwrap());
-      fill_with_space(indenter.bytes, indenter.dst_cursor..indenter.dst_cursor+self.0);
     }
 
     *text = unsafe{ String::from_utf8_unchecked(bytes) };
@@ -79,6 +77,11 @@ struct Line_Indenter<'a>
 
 impl<'a> Line_Indenter<'a>
 {
+  fn fill_indentation(&mut self)
+  {
+    self.dst_cursor -= self.indentation;
+    fill_with_space(self.bytes, self.dst_cursor..self.dst_cursor+self.indentation);
+  }
 }
 
 fn fill_with_space(bytes: &mut [u8], rng: Range<usize>)
