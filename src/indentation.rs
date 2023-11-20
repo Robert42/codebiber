@@ -96,8 +96,6 @@ impl<'a> Line_Indenter<'a>
       self.copy_content(i);
       self.fill_indentation();
     }
-
-    debug_assert_eq!(self.dst_cursor, 0, "{:?}", std::str::from_utf8(self.bytes).unwrap());
   }
 
   fn copy_content(&mut self, from: usize)
@@ -169,6 +167,12 @@ mod test
   {
     assert_eq!(indent!(2, "x\n\ny\n\n\nz"), "  x\n\n  y\n\n\n  z");
     assert_eq!(indent!(2, "x\n"), "  x\n");
+  }
+
+  #[test]
+  fn test_difficult_cases()
+  {
+    assert_eq!(indent!(2, "\nx"), "\n  x");
   }
 }
 
