@@ -52,7 +52,7 @@ where F: Fn(&str, &mut String) -> std::fmt::Result<>
 
         let new_checksum = blake3::hash(new_code.as_bytes());
 
-        write!(&mut generated, "{i}{before}<< /codegen ", i=end.indentation, before=end.before_marker)?;
+        write!(&mut generated, "{i}{before}<< /codegen ", i=begin.indentation, before=end.before_marker)?;
         if cfg.checksum_bytes_to_store > 0
         {
           write!(&mut generated, "{checksum} ", checksum=&new_checksum.to_hex()[0..2*cfg.checksum_bytes_to_store as usize])?;
@@ -180,6 +180,22 @@ mod test
 
     // bug: dirty flag overwritten:
     assert_eq!(generate("<< codegen empty >>\n<< /codegen af13 >>\n<< codegen empty >>\n<< /codegen >>", CKSM_0, gen).pretty_unwrap(), Some("<< codegen empty >>\n<< /codegen >>\n<< codegen empty >>\n<< /codegen >>\n".to_owned()));
+  }
+  
+  #[test]
+  fn test_indentation()
+  {
+    fn gen(n: &str, out: &mut String) -> fmt::Result
+    {
+      match n
+      {
+        "x" => write!(out, "42\n137\n1337"),
+        n => todo!("{n}"),
+      }
+    }
+
+    assert_eq!(generate("<< codegen x >>\n<< /codegen >>", CFG, gen).pretty_unwrap(), Some("<< codegen x >>\n42\n137\n1337\n<< /codegen >>\n".to_owned()));
+    assert_eq!(generate("  << codegen x >>\n<< /codegen >>", CFG, gen).pretty_unwrap(), Some("  << codegen x >>\n42\n137\n1337\n  << /codegen >>\n".to_owned()));
   }
 }
 
