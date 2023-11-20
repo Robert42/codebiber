@@ -12,19 +12,7 @@ impl Indentation
 
     {
       let mut indenter = Line_Indenter::new(&mut bytes, rng.start, self.0);
-
-      for i in (0..indenter.src_cursor).rev()
-      {
-        if indenter.bytes[i] == b'\n'
-        {
-          indenter.copy_content(i+1);
-          indenter.fill_indentation();
-        }
-      }
-
-      indenter.copy_content(0);
-      indenter.fill_indentation();
-      debug_assert_eq!(indenter.dst_cursor, 0, "{:?}", std::str::from_utf8(indenter.bytes).unwrap());
+      indenter.indent();
     }
 
     *text = unsafe{ String::from_utf8_unchecked(bytes) };
@@ -68,6 +56,22 @@ impl<'a> Line_Indenter<'a>
       dst_cursor,
       indentation,
     }
+  }
+
+  fn indent(&mut self)
+  {
+    for i in (0..self.src_cursor).rev()
+    {
+      if self.bytes[i] == b'\n'
+      {
+        self.copy_content(i+1);
+        self.fill_indentation();
+      }
+    }
+
+    self.copy_content(0);
+    self.fill_indentation();
+    debug_assert_eq!(self.dst_cursor, 0, "{:?}", std::str::from_utf8(self.bytes).unwrap());
   }
 
   fn copy_content(&mut self, from: usize)
