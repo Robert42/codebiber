@@ -1,5 +1,6 @@
 use super::*;
 
+#[cfg(test)]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Line<'a>
 {
@@ -8,6 +9,7 @@ pub enum Line<'a>
   END_CODEGEN{marker: Marker<'a>, checksum: &'a str,},
 }
 
+#[cfg(test)]
 pub fn parse(node: crate::pest::iterators::Pair<Rule>) -> Result<Line>
 {
   use Line::*;

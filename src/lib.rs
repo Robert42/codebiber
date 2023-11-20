@@ -1,12 +1,15 @@
 #![feature(slice_as_chunks)]
 #![allow(non_camel_case_types)]
-#![cfg(test)]
 
-mod parse_file;
-mod indentation;
+pub mod parse_file;
+pub mod indentation;
+pub mod process;
 pub mod gen;
 
+pub use process::{process_file, Process_Error as Error, Result};
+
 pub mod pretty_unwrap;
+#[cfg(test)]
 use pretty_unwrap::Pretty_Unwrap;
 
 extern crate blake3;
