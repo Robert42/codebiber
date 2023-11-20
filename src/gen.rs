@@ -48,6 +48,7 @@ where F: Fn(&str, &mut String) -> std::fmt::Result<>
         {
           generated += "\n";
         }
+        begin.indentation.indent_subrange(&mut generated, generated_begin..);
         let new_code = &generated[generated_begin..];
 
         let new_checksum = blake3::hash(new_code.as_bytes());
@@ -195,7 +196,7 @@ mod test
     }
 
     assert_eq!(generate("<< codegen x >>\n<< /codegen >>", CFG, gen).pretty_unwrap(), Some("<< codegen x >>\n42\n137\n1337\n<< /codegen >>\n".to_owned()));
-    assert_eq!(generate("  << codegen x >>\n<< /codegen >>", CFG, gen).pretty_unwrap(), Some("  << codegen x >>\n42\n137\n1337\n  << /codegen >>\n".to_owned()));
+    assert_eq!(generate("  << codegen x >>\n<< /codegen >>", CFG, gen).pretty_unwrap(), Some("  << codegen x >>\n  42\n  137\n  1337\n  << /codegen >>\n".to_owned()));
   }
 }
 
