@@ -34,10 +34,7 @@ impl Indentation
   {
     let mut xs = SmallString::new();
     xs.reserve(self.0);
-    for _ in 0..self.0
-    {
-      xs.push(' ');
-    }
+    write!(&mut xs, "{}", self).unwrap();
     xs
   }
 }
@@ -48,7 +45,7 @@ impl fmt::Display for Indentation
   {
     for _ in 0..self.0
     {
-      write!(f, "{}", ' ')?;
+      f.write_char(' ')?;
     }
     Ok(())
   }
@@ -78,4 +75,4 @@ mod test
   }
 }
 
-use std::fmt;
+use std::fmt::{self, Write};
