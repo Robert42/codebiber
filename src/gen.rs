@@ -30,14 +30,12 @@ where F: Fn(&str, &mut String) -> std::fmt::Result<>
       HANDWRITTEN(code) => generated += code,
       CODEGEN { identifier, code: old_code, checksum: old_checksum, begin, end } =>
       {
-        let old_checksum = if let &Some(old_checksum) = old_checksum
+        check_code_checksum(old_code, old_checksum);
+        let old_checksum =
         {
-          if blake3::hash(old_code.as_bytes()) != old_checksum {todo!()}
-          old_checksum
-        }else
-        {
-          changed = cfg.store_checksum;
-          blake3::hash(old_code.as_bytes())
+          let actual_checksum = blake3::hash(old_code.as_bytes());
+          // changed = cfg.store_checksum;
+          actual_checksum
         };
 
         write!(&mut generated, "{i}{before}<< codegen {ident} >>{after}\n", i=begin.indentation, before=begin.before_marker, after=begin.after_marker, ident=identifier)?;
@@ -66,6 +64,17 @@ where F: Fn(&str, &mut String) -> std::fmt::Result<>
   return if changed {Ok(Some(generated))} else {Ok(None)};
 }
 
+fn check_code_checksum(code: &str, loaded_checksam: &ArrayVec<u8, 32>) -> Result<blake3::Hash>
+{
+  let actual_hashsum = blake3::hash(code.as_bytes());
+  if &actual_hashsum.as_bytes()[..loaded_checksam.len()] != loaded_checksam.as_slice()
+  {
+    return Err(Error::WRONG_CHECKSUM(actual_hashsum));
+  }
+
+  return Ok(actual_hashsum);
+}
+
 pub type Result<T=(), E=Error> = std::result::Result<T, E>;
 
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -75,6 +84,8 @@ pub enum Error
   FIND(#[from] crate::find::Error),
   #[error("fmt error: {0}")]
   FMT(#[from] std::fmt::Error),
+  #[error("wrong blake3 checksum. Was the code modified in between?\nActual blake3 checksum: {0}")]
+  WRONG_CHECKSUM(blake3::Hash),
 }
 
 #[cfg(test)]
@@ -109,6 +120,15 @@ mod test
         "finestructure_constant" => write!(x, "137"),
         _ => unreachable!("{i}"),
       }).pretty_unwrap(), Some("<< codegen answer >>\n42\n<< /codegen >>\n<< codegen finestructure_constant >>\n137\n<< /codegen >>\n".to_owned()));
+  }
+  
+  #[test]
+  fn test_check_checksum()
+  {
+    assert_eq!(check_code_checksum("42", &ArrayVec::new()), Ok(blake3::hash(b"42")));
+    assert_eq!(check_code_checksum("42", &blake3::hash(b"42").as_bytes().iter().copied().collect()), Ok(blake3::hash(b"42")));
+    assert_eq!(check_code_checksum("42", &blake3::hash(b"42").as_bytes()[0..4].iter().copied().collect()), Ok(blake3::hash(b"42")));
+    assert_eq!(check_code_checksum("42", &blake3::hash(b"42").as_bytes()[1..5].iter().copied().collect()), Err(Error::WRONG_CHECKSUM(blake3::hash(b"42"))));
   }
 }
 
