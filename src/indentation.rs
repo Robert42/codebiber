@@ -1,5 +1,3 @@
-use super::*;
-
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Indentation(pub usize);
 
@@ -15,26 +13,25 @@ impl Indentation
     let num_linebreaks = bytes[rng.clone()].iter().copied().filter(|&x| x==b'\n').count();
     let num_indentations = num_linebreaks + 1;
 
-    let mut src_cursor = bytes.len();
-    let mut dst_cursor = src_cursor + num_indentations * self.0;
+    let src_cursor = bytes.len();
+    let dst_cursor = src_cursor + num_indentations * self.0;
     bytes.resize(dst_cursor, b'#');
 
     {
-      let mut dst_cursor = dst_cursor;
-
       let mut indenter = Line_Indenter{
         bytes: &mut bytes[rng],
-        src_cursor: src_cursor,
-        dst_cursor: dst_cursor,
+        src_cursor,
+        dst_cursor,
         indentation: self.0,
       };
 
       for i in (0..src_cursor).rev()
       {
-        if indenter.bytes[i] != b'\n' {continue;}
-
-        indenter.copy_content(i+1);
-        indenter.fill_indentation();
+        if indenter.bytes[i] == b'\n'
+        {
+          indenter.copy_content(i+1);
+          indenter.fill_indentation();
+        }
       }
 
       indenter.copy_content(0);
