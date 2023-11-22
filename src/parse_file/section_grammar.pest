@@ -7,14 +7,14 @@ code = @{ (!marker_line ~ any_char* ~ NEWLINE)+ ~ (!marker_line ~ any_char+)? | 
 
 marker_line = { begin_marker_line | end_marker_line }
 begin_marker_line = { indentation ~ before_marker ~ "<<" ~ s* ~ "codegen" ~ s+ ~ identifier ~ s* ~ ">>" ~ after_marker }
-end_marker_line = { indentation ~ before_marker ~ "<<" ~ s* ~ "/codegen" ~ s+ ~ checksum ~ s* ~ ">>" ~ after_marker }
+end_marker_line = { indentation ~ before_marker ~ "<<" ~ s* ~ "/codegen" ~ (s+ ~ checksum)? ~ s* ~ ">>" ~ after_marker }
 
 before_marker = { (!"<<" ~ any_char)* }
 after_marker = { any_char* }
 
 indentation = @{ s* }
 identifier = @{ ("_" | ASCII_ALPHANUMERIC)+ }
-checksum = @{ (ASCII_HEX_DIGIT{2}){0,16} }
+checksum = @{ (ASCII_HEX_DIGIT{2}){1,16} }
 
 s = _{ " " }
 any_char = _{ !NEWLINE ~ ANY }
