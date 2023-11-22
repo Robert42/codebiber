@@ -1,6 +1,6 @@
 use super::*;
 
-pub fn process_file<P, F>(path: P, f: F) -> Result
+pub fn process_file<P, F>(path: P, f: &F) -> Result
 where F: Fn(&str, &mut String) -> std::fmt::Result,
       P: AsRef<Path>,
 {
@@ -12,6 +12,18 @@ where F: Fn(&str, &mut String) -> std::fmt::Result,
   if let Some(generated) = gen::generate(&input, cfg, f)?
   {
     std::fs::write(path, generated)?;
+  }
+
+  Ok(())
+}
+
+pub fn process_files<P, F>(paths: &[P], f: F) -> Result
+where F: Fn(&str, &mut String) -> std::fmt::Result,
+      P: AsRef<Path>,
+{
+  for path in paths
+  {
+    process_file(path, &f)?;
   }
 
   Ok(())
