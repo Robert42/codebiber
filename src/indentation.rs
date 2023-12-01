@@ -3,33 +3,25 @@ pub struct Indentation(pub usize);
 
 impl Indentation
 {
-  pub fn indent_string(self, text: &mut String)
-  {
-    let bytes = indent_lines(text.as_bytes(), self.0);
-
-    *text = unsafe{ String::from_utf8_unchecked(bytes) };
-  }
-
   pub fn indent_str(self, text: &str) -> String
   {
-    let mut x = text.to_owned();
-    self.indent_string(&mut x);
-    x
+    indent_lines(text, self.0)
   }
 }
 
-fn indent_lines(input: &[u8], indentation: usize) -> Vec<u8>
+fn indent_lines(input: &str, indentation: usize) -> String
 {
-  let mut output = Vec::with_capacity((input.len()+1)*(indentation+1));
+  let mut output = String::with_capacity((input.len()+1)*(indentation+1));
 
-  let indentation = std::iter::repeat(b' ').take(indentation);
-  for (i, line) in input.split(|&x| x == b'\n').enumerate()
+  let indentation = std::iter::repeat(' ').take(indentation);
+  for (i, line) in input.lines().enumerate()
   {
-    if i != 0 { output.push(b'\n'); }
+    if i != 0 { output.push('\n'); }
     if line.is_empty() {continue}
     output.extend(indentation.clone());
-    output.extend_from_slice(line);
+    output.push_str(line);
   }
+  if input.as_bytes().last().copied() == Some(b'\n') { output.push('\n'); }
 
   output
 }
