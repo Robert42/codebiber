@@ -1,7 +1,7 @@
 use super::*;
 
 pub fn process_file<P, F>(path: P, f: &F) -> Result
-where F: Fn(&str, &mut String) -> std::fmt::Result,
+where F: Fn(&str, &mut String) -> Codegen_Result,
       P: AsRef<Path>,
 {
   let path = path.as_ref();
@@ -18,7 +18,7 @@ where F: Fn(&str, &mut String) -> std::fmt::Result,
 }
 
 pub fn process_files<P, F>(paths: &[P], f: F) -> Result
-where F: Fn(&str, &mut String) -> std::fmt::Result,
+where F: Fn(&str, &mut String) -> Codegen_Result,
       P: AsRef<Path>,
 {
   for path in paths
