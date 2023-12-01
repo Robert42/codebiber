@@ -60,6 +60,7 @@ mod test
   {
     assert_eq!(indent!(0, ""), "");
     assert_eq!(indent!(0, "x"), "x");
+    assert_eq!(indent!(0, "x\ny"), "x\ny");
   }
 
   #[test]
@@ -67,6 +68,7 @@ mod test
   {
     assert_eq!(indent!(2, ""), "");
     assert_eq!(indent!(2, "x"), "  x");
+    assert_eq!(indent!(2, "x\ny"), "  x\n  y");
     assert_eq!(indent!(4, "Hello, World!"), "    Hello, World!");
   }
 
@@ -79,6 +81,7 @@ mod test
   #[test]
   fn test_dont_add_trailing_whitespace()
   {
+    assert_eq!(indent!(2, "x\n\n\ny"), "  x\n\n\n  y");
     assert_eq!(indent!(2, "x\n\ny\n\n\nz"), "  x\n\n  y\n\n\n  z");
     assert_eq!(indent!(2, "x\n"), "  x\n");
   }
@@ -87,23 +90,6 @@ mod test
   fn test_difficult_cases()
   {
     assert_eq!(indent!(2, "\nx"), "\n  x");
-  }
-
-  #[test]
-  fn test_indent_lines_simpl_impl()
-  {
-    fn f(code: &str, indentation: usize) -> String
-    {
-      let x = super::indent_lines(code.as_bytes(), indentation);
-      let x : String = String::from_utf8(x).unwrap();
-      x
-    }
-    assert_eq!(f("", 0), "");
-    assert_eq!(f("", 1), "");
-    assert_eq!(f("x", 0), "x");
-    assert_eq!(f("x\ny", 0), "x\ny");
-    assert_eq!(f("x\ny", 2), "  x\n  y");
-    assert_eq!(f("x\n\n\ny", 2), "  x\n\n\n  y");
   }
 }
 
