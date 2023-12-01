@@ -89,6 +89,24 @@ fn indent_lines(bytes_buf: &mut Vec<u8>, start: usize, indentation: usize)
   }
 }
 
+#[cfg(test)]
+fn indent_lines_simpl_impl(input: &[u8], start: usize, indentation: usize) -> Vec<u8>
+{
+  let mut output = Vec::with_capacity(start + (input.len()-start+1)*(indentation+1));
+  output.extend_from_slice(&input[..start]);
+
+  let indentation = std::iter::repeat(b' ').take(indentation);
+  for (i, line) in input[start..].split(|&x| x == b'\n').enumerate()
+  {
+    if i != 0 { output.push(b'\n'); }
+    if line.is_empty() {continue}
+    output.extend(indentation.clone());
+    output.extend_from_slice(line);
+  }
+
+  output
+}
+
 impl<'a> Line_Indenter<'a>
 {
   fn copy_content(&mut self, from: usize)
@@ -128,6 +146,7 @@ impl fmt::Display for Indentation
 #[cfg(test)]
 mod test
 {
+  use super::indent_lines_simpl_impl;
   use crate::proptest::prelude::*;
 
   macro_rules! indent {
@@ -217,24 +236,6 @@ mod test
     assert_eq!(f("x\ny", 0, 0), "x\ny");
     assert_eq!(f("x\ny", 0, 2), "  x\n  y");
     assert_eq!(f("x\n\n\ny", 0, 2), "  x\n\n\n  y");
-  }
-
-  #[cfg(test)]
-  fn indent_lines_simpl_impl(input: &[u8], start: usize, indentation: usize) -> Vec<u8>
-  {
-    let mut output = Vec::with_capacity(start + (input.len()-start+1)*(indentation+1));
-    output.extend_from_slice(&input[..start]);
-  
-    let indentation = std::iter::repeat(b' ').take(indentation);
-    for (i, line) in input[start..].split(|&x| x == b'\n').enumerate()
-    {
-      if i != 0 { output.push(b'\n'); }
-      if line.is_empty() {continue}
-      output.extend(indentation.clone());
-      output.extend_from_slice(line);
-    }
-  
-    output
   }
 }
 
