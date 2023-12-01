@@ -48,7 +48,14 @@ where F: Fn(&str, &mut String) -> Codegen_Result
         write!(&mut generated, "{i}{before}<< codegen {ident} >>{after}\n", i=begin.indentation, before=begin.before_marker, after=begin.after_marker, ident=identifier)?;
         
         let generated_begin = generated.len();
-        match f(identifier, &mut generated)?
+        let usage_decision = {
+          let guard = blake3::hash(generated.as_bytes());
+          let usage_decision = f(identifier, &mut generated)?;
+          if generated.len() < generated_begin { return Err(Gen_Error::FAULT); }
+          if guard != blake3::hash(generated[..generated_begin].as_bytes()) { return Err(Gen_Error::FAULT); }
+          usage_decision
+        };
+        match usage_decision
         {
           USE => 
           {
@@ -105,6 +112,8 @@ pub enum Gen_Error
   FMT(#[from] std::fmt::Error),
   #[error("wrong blake3 checksum. Was the code modified in between?\nActual blake3 checksum: {0}")]
   WRONG_CHECKSUM(blake3::Hash),
+  #[error("The code generating function modified code outside the code section")]
+  FAULT,
 }
 
 impl Config
@@ -243,7 +252,24 @@ mod test
 
     assert_eq!(generate("<< codegen x >>\nxyuz\nuv\n<< /codegen >>", CFG, ignore_but_add_some_bytes).pretty_unwrap(), None);
     assert_eq!(generate("  << codegen x >>\nxyuz\n  <>\n    []\nuv\n<< /codegen >>", CFG, ignore_but_add_some_bytes).pretty_unwrap(), None);
+  }
+  
+  #[test]
+  fn forbid_accidentally_modifying_previous_code()
+  {
+    fn shrink(_n: &str, out: &mut String) -> Codegen_Result
+    {
+      out.truncate(out.len()-1);
+      Ok(USE)
+    }
+    fn modify(_n: &str, out: &mut String) -> Codegen_Result
+    {
+      unsafe { out.as_bytes_mut()[0] = b'!'; }
+      Ok(USE)
+    }
 
+    assert_eq!(generate("xyz\n<< codegen x >>\nxyuz\nuv\n<< /codegen >>", CFG, shrink), Err(Gen_Error::FAULT));
+    assert_eq!(generate("xyz\n<< codegen x >>\nxyuz\nuv\n<< /codegen >>", CFG, modify), Err(Gen_Error::FAULT));
   }
 }
 
