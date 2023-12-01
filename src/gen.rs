@@ -8,13 +8,10 @@ pub struct Config
   pub checksum_bytes_to_store: u8,
 }
 
-#[must_use="The generator might decide to ignore a section, which must be respected"]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Codegen_Usage {USE, IGNORE}
-pub type Codegen_Result = std::result::Result<Codegen_Usage, std::fmt::Error>;
+pub type Fmt_Result<T=Option<String>> = std::result::Result<T, std::fmt::Error>;
 
 pub fn generate<F>(input: &str, cfg: Config, f: F) -> Result<Option<String>>
-where F: Fn(&str, &mut String) -> Codegen_Result
+where F: Fn(&str) -> Fmt_Result
 {
   debug_assert!(cfg.is_valid());
 
@@ -47,33 +44,18 @@ where F: Fn(&str, &mut String) -> Codegen_Result
 
         write!(&mut generated, "{i}{before}<< codegen {ident} >>{after}\n", i=begin.indentation, before=begin.before_marker, after=begin.after_marker, ident=identifier)?;
         
-        let generated_begin = generated.len();
-        let usage_decision = {
-          let guard = blake3::hash(generated.as_bytes());
-          let usage_decision = f(identifier, &mut generated)?;
-          if generated.len() < generated_begin { return Err(Gen_Error::FORBIDDEN); }
-          if guard != blake3::hash(generated[..generated_begin].as_bytes()) { return Err(Gen_Error::FORBIDDEN); }
-          usage_decision
-        };
-        match usage_decision
+        let _tmp_buffer;
+        let new_code = match f(identifier)?
         {
-          USE => 
+          Some(generated_code) => 
           {
-            if generated.as_bytes().last().copied() != Some(b'\n')
-            {
-              generated += "\n";
-            }
-            begin.indentation.indent_subrange(&mut generated, generated_begin..);
+            _tmp_buffer = begin.indentation.indent_str(generated_code.as_str());
+            _tmp_buffer.as_str()
           }
-          IGNORE =>
-          {
-            generated.truncate(generated_begin);
-            generated += old_code;
-          }
-        }
-
-        let new_code = &generated[generated_begin..];
+          None => old_code
+        };
         let new_checksum = blake3::hash(new_code.as_bytes());
+        generated += new_code;
 
         write!(&mut generated, "{i}{before}<< /codegen ", i=begin.indentation, before=end.before_marker)?;
         if cfg.checksum_bytes_to_store > 0
@@ -124,8 +106,6 @@ impl Config
   }
 }
 
-use Codegen_Usage::*;
-
 #[cfg(test)]
 mod test
 {
@@ -136,32 +116,32 @@ mod test
   #[test]
   fn test_trivial()
   {
-    assert_eq!(generate("", CFG, |_,_| Ok(USE)).pretty_unwrap(), None);
-    assert_eq!(generate("xyz", CFG, |_,_| Ok(USE)).pretty_unwrap(), None);
+    assert_eq!(generate("", CFG, |_| Ok(Some("abc".to_owned()))).pretty_unwrap(), None);
+    assert_eq!(generate("xyz", CFG, |_| Ok(Some("abc".to_owned()))).pretty_unwrap(), None);
   }
 
   #[test]
   fn test_simple_replace()
   {
-    assert_eq!(generate("<< codegen foo >>\nxyz\n<< /codegen >>", CFG, |_,x| { write!(x, "xyz")?; Ok(USE) }).pretty_unwrap(), None);
-    assert_eq!(generate("<< codegen foo >>\nxyz\n<< /codegen >>", CFG, |_,x| { write!(x, "uvw")?; Ok(USE) }).pretty_unwrap(), Some("<< codegen foo >>\nuvw\n<< /codegen >>\n".to_owned()));
-    assert_eq!(generate("<< codegen foo >>\nremove me\n<< /codegen >>", CFG, |_,_| Ok(USE)).pretty_unwrap(), Some("<< codegen foo >>\n<< /codegen >>\n".to_owned()));
-    assert_eq!(generate("abc\ndefg<< codegen foo >>hijk\nxyz\nlmnop<< /codegen >>qrst\nuvw", CFG, |_,x| { write!(x, "uvw")?; Ok(USE) }).pretty_unwrap(), Some("abc\ndefg<< codegen foo >>hijk\nuvw\nlmnop<< /codegen >>qrst\nuvw".to_owned()));
+    assert_eq!(generate("<< codegen foo >>\nxyz\n<< /codegen >>", CFG, |_| Ok(Some("xyz".to_owned())) ).pretty_unwrap(), None);
+    assert_eq!(generate("<< codegen foo >>\nxyz\n<< /codegen >>", CFG, |_| Ok(Some("uvw".to_owned())) ).pretty_unwrap(), Some("<< codegen foo >>\nuvw\n<< /codegen >>\n".to_owned()));
+    assert_eq!(generate("<< codegen foo >>\nremove me\n<< /codegen >>", CFG, |_| Ok(Some("".to_owned()))).pretty_unwrap(), Some("<< codegen foo >>\n<< /codegen >>\n".to_owned()));
+    assert_eq!(generate("abc\ndefg<< codegen foo >>hijk\nxyz\nlmnop<< /codegen >>qrst\nuvw", CFG, |_| Ok(Some("uvw".to_owned())) ).pretty_unwrap(), Some("abc\ndefg<< codegen foo >>hijk\nuvw\nlmnop<< /codegen >>qrst\nuvw".to_owned()));
   }
 
   #[test]
   fn test_use_identifier()
   {
     assert_eq!(generate("<< codegen answer >>\n<< /codegen >>\n<< codegen finestructure_constant >>\n<< /codegen >>", CFG,
-      |i,x|
+      |i|
       {
-        match i
+        let code = match i
         {
-        "answer" => write!(x, "42")?,
-        "finestructure_constant" => write!(x, "137")?,
+        "answer" => "42",
+        "finestructure_constant" => "137",
         _ => unreachable!("{i}"),
-        }
-        Ok(USE)
+        };
+        Ok(Some(code.to_owned()))
       }).pretty_unwrap(), Some("<< codegen answer >>\n42\n<< /codegen >>\n<< codegen finestructure_constant >>\n137\n<< /codegen >>\n".to_owned()));
   }
   
@@ -182,17 +162,17 @@ mod test
     const CKSM_4 : Config = Config{checksum_bytes_to_store: 4, .. CFG};
     const CKSM_5 : Config = Config{checksum_bytes_to_store: 5, .. CFG};
 
-    fn gen(n: &str, out: &mut String) -> Codegen_Result
+    fn gen(n: &str) -> Fmt_Result
     {
-      match n
+      let x = match n
       {
-        "empty" => (),
-        "42" => write!(out, "42")?,
-        "newline" => write!(out, "\n")?,
-        "42_newline" => write!(out, "42\n")?,
+        "empty" => "",
+        "42" => "42",
+        "newline" => "\n",
+        "42_newline" => "42\n",
         n => todo!("{n}"),
-      }
-      Ok(USE)
+      };
+      Ok(Some(x.to_owned()))
     }
 
     // differenet lengths
@@ -218,15 +198,14 @@ mod test
   #[test]
   fn test_indentation()
   {
-    fn gen(n: &str, out: &mut String) -> Codegen_Result
+    fn gen(n: &str) -> Fmt_Result
     {
-      match n
-
+      let x = match n
       {
-        "x" => write!(out, "42\n137\n1337")?,
+        "x" => "42\n137\n1337",
         n => todo!("{n}"),
-      }
-      Ok(USE)
+      };
+      Ok(Some(x.into()))
     }
 
     assert_eq!(generate("<< codegen x >>\n<< /codegen >>", CFG, gen).pretty_unwrap(), Some("<< codegen x >>\n42\n137\n1337\n<< /codegen >>\n".to_owned()));
@@ -236,40 +215,13 @@ mod test
   #[test]
   fn allow_skipping_sections()
   {
-    fn ignore(_n: &str, _out: &mut String) -> Codegen_Result
+    fn ignore(_n: &str) -> Fmt_Result
     {
-      Ok(IGNORE)
+      Ok(None)
     }
 
     assert_eq!(generate("<< codegen x >>\nxyuz\nuv\n<< /codegen >>", CFG, ignore).pretty_unwrap(), None);
     assert_eq!(generate("  << codegen x >>\nxyuz\n  <>\n    []\nuv\n<< /codegen >>", CFG, ignore).pretty_unwrap(), None);
-
-    fn ignore_but_add_some_bytes(_n: &str, out: &mut String) -> Codegen_Result
-    {
-      write!(out, "this should be undone!")?;
-      Ok(IGNORE)
-    }
-
-    assert_eq!(generate("<< codegen x >>\nxyuz\nuv\n<< /codegen >>", CFG, ignore_but_add_some_bytes).pretty_unwrap(), None);
-    assert_eq!(generate("  << codegen x >>\nxyuz\n  <>\n    []\nuv\n<< /codegen >>", CFG, ignore_but_add_some_bytes).pretty_unwrap(), None);
-  }
-  
-  #[test]
-  fn forbid_accidentally_modifying_previous_code()
-  {
-    fn shrink(_n: &str, out: &mut String) -> Codegen_Result
-    {
-      out.truncate(out.len()-1);
-      Ok(USE)
-    }
-    fn modify(_n: &str, out: &mut String) -> Codegen_Result
-    {
-      unsafe { out.as_bytes_mut()[0] = b'!'; }
-      Ok(USE)
-    }
-
-    assert_eq!(generate("xyz\n<< codegen x >>\nxyuz\nuv\n<< /codegen >>", CFG, shrink), Err(Gen_Error::FORBIDDEN));
-    assert_eq!(generate("xyz\n<< codegen x >>\nxyuz\nuv\n<< /codegen >>", CFG, modify), Err(Gen_Error::FORBIDDEN));
   }
 }
 
