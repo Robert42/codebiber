@@ -11,3 +11,6 @@ pest = "2.7.5"
 pest_derive = "2.7.5"
 smallvec = "1.11.2"
 thiserror = "1.0.50"
+
+[dev-dependencies]
+proptest = "1.4.0"

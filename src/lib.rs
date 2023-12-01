@@ -16,6 +16,9 @@ extern crate blake3;
 extern crate arrayvec;
 use arrayvec::ArrayVec;
 
+#[cfg(test)]
+extern crate proptest;
+
 extern crate pest;
 #[macro_use]
 extern crate pest_derive;
