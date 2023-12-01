@@ -9,7 +9,7 @@ impl Indentation
   {
     let mut bytes = std::mem::take(text).into_bytes();
 
-    indent_lines(&mut bytes, 0, self.0);
+    indent_lines(&mut bytes, self.0);
 
     *text = unsafe{ String::from_utf8_unchecked(bytes) };
   }
@@ -30,8 +30,9 @@ struct Line_Indenter<'a>
   indentation: usize,
 }
 
-fn indent_lines(bytes_buf: &mut Vec<u8>, start: usize, indentation: usize)
+fn indent_lines(bytes_buf: &mut Vec<u8>, indentation: usize)
 {
+  let start = 0;
   if indentation == 0 || start == bytes_buf.len() {return;} // microoptimization
 
   assert!(bytes_buf.len() < u32::MAX as usize);
@@ -85,13 +86,12 @@ fn indent_lines(bytes_buf: &mut Vec<u8>, start: usize, indentation: usize)
 }
 
 #[cfg(test)]
-fn indent_lines_simpl_impl(input: &[u8], start: usize, indentation: usize) -> Vec<u8>
+fn indent_lines_simpl_impl(input: &[u8], indentation: usize) -> Vec<u8>
 {
-  let mut output = Vec::with_capacity(start + (input.len()-start+1)*(indentation+1));
-  output.extend_from_slice(&input[..start]);
+  let mut output = Vec::with_capacity((input.len()+1)*(indentation+1));
 
   let indentation = std::iter::repeat(b' ').take(indentation);
-  for (i, line) in input[start..].split(|&x| x == b'\n').enumerate()
+  for (i, line) in input.split(|&x| x == b'\n').enumerate()
   {
     if i != 0 { output.push(b'\n'); }
     if line.is_empty() {continue}
@@ -187,16 +187,12 @@ mod test
   proptest!
   {
     #[test]
-    fn prop_same_behavior_as_simple_impl(text in "(\\PC*\\n)*\\PC*", indentation in 0..=255_usize, start in 0.0..=1.0)
+    fn prop_same_behavior_as_simple_impl(text in "(\\PC*\\n)*\\PC*", indentation in 0..=255_usize)
     {
-      let start : f64 = start * (text.len() as f64 - 1.0);
-      let start = start.round() as usize;
-      let start = start.max(0).min(if text.len()>0 {text.len()-1} else {0});
-
-      let expected = indent_lines_simpl_impl(text.as_bytes(), start, indentation);
+      let expected = indent_lines_simpl_impl(text.as_bytes(), indentation);
 
       let mut text = text.into_bytes();
-      super::indent_lines(&mut text, start, indentation);
+      super::indent_lines(&mut text, indentation);
       let actual = text;
 
       assert_eq!(expected, actual);
@@ -206,20 +202,20 @@ mod test
   #[test]
   fn test_indent_lines_simpl_impl()
   {
-    fn f(code: &str, start: usize, indentation: usize) -> String
+    fn f(code: &str, indentation: usize) -> String
     {
-      let x = indent_lines_simpl_impl(code.as_bytes(), start, indentation);
+      let x = indent_lines_simpl_impl(code.as_bytes(), indentation);
       let x : String = String::from_utf8(x).unwrap();
       x
     }
-    assert_eq!(f("", 0, 0), "");
-    assert_eq!(f("", 0, 1), "");
-    assert_eq!(f("x", 0, 0), "x");
-    assert_eq!(f("x\ny", 0, 0), "x\ny");
-    assert_eq!(f("x\ny", 0, 2), "  x\n  y");
-    assert_eq!(f("x\n\n\ny", 0, 2), "  x\n\n\n  y");
+    assert_eq!(f("", 0), "");
+    assert_eq!(f("", 1), "");
+    assert_eq!(f("x", 0), "x");
+    assert_eq!(f("x\ny", 0), "x\ny");
+    assert_eq!(f("x\ny", 2), "  x\n  y");
+    assert_eq!(f("x\n\n\ny", 2), "  x\n\n\n  y");
   }
 }
 
 use std::fmt::{self, Write};
-use std::ops::{Range, RangeFrom};
+use std::ops::Range;
