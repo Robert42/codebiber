@@ -51,8 +51,8 @@ where F: Fn(&str, &mut String) -> Codegen_Result
         let usage_decision = {
           let guard = blake3::hash(generated.as_bytes());
           let usage_decision = f(identifier, &mut generated)?;
-          if generated.len() < generated_begin { return Err(Gen_Error::FAULT); }
-          if guard != blake3::hash(generated[..generated_begin].as_bytes()) { return Err(Gen_Error::FAULT); }
+          if generated.len() < generated_begin { return Err(Gen_Error::FORBIDDEN); }
+          if guard != blake3::hash(generated[..generated_begin].as_bytes()) { return Err(Gen_Error::FORBIDDEN); }
           usage_decision
         };
         match usage_decision
@@ -113,7 +113,7 @@ pub enum Gen_Error
   #[error("wrong blake3 checksum. Was the code modified in between?\nActual blake3 checksum: {0}")]
   WRONG_CHECKSUM(blake3::Hash),
   #[error("The code generating function modified code outside the code section")]
-  FAULT,
+  FORBIDDEN,
 }
 
 impl Config
@@ -268,8 +268,8 @@ mod test
       Ok(USE)
     }
 
-    assert_eq!(generate("xyz\n<< codegen x >>\nxyuz\nuv\n<< /codegen >>", CFG, shrink), Err(Gen_Error::FAULT));
-    assert_eq!(generate("xyz\n<< codegen x >>\nxyuz\nuv\n<< /codegen >>", CFG, modify), Err(Gen_Error::FAULT));
+    assert_eq!(generate("xyz\n<< codegen x >>\nxyuz\nuv\n<< /codegen >>", CFG, shrink), Err(Gen_Error::FORBIDDEN));
+    assert_eq!(generate("xyz\n<< codegen x >>\nxyuz\nuv\n<< /codegen >>", CFG, modify), Err(Gen_Error::FORBIDDEN));
   }
 }
 
