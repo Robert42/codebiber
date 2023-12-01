@@ -6,6 +6,7 @@ pub mod indentation;
 pub mod process;
 pub mod gen;
 
+pub use gen::{Codegen_Usage, Codegen_Result};
 pub use process::{process_file, process_files, Process_Error as Error, Result};
 
 pub mod pretty_unwrap;
