@@ -5,18 +5,13 @@ pub struct Indentation(pub usize);
 
 impl Indentation
 {
-  pub fn indent_subrange(self, text: &mut String, rng: RangeFrom<usize>)
+  pub fn indent_string(self, text: &mut String)
   {
     let mut bytes = std::mem::take(text).into_bytes();
 
-    indent_lines(&mut bytes, rng.start, self.0);
+    indent_lines(&mut bytes, 0, self.0);
 
     *text = unsafe{ String::from_utf8_unchecked(bytes) };
-  }
-
-  pub fn indent_string(self, text: &mut String)
-  {
-    self.indent_subrange(text, 0..)
   }
 
   pub fn indent_str(self, text: &str) -> String
@@ -153,13 +148,6 @@ mod test
     ($i:expr, $str:expr) => {
       crate::indentation::Indentation($i).indent_str($str).as_str()
     };
-    ($i:expr, $str:expr, $start_at:expr) => {
-      {
-        let mut xs : String = $str.to_string();
-        crate::indentation::Indentation($i).indent_subrange(&mut xs, $start_at .. );
-        xs
-      }
-    };
   }
 
   #[test]
@@ -194,12 +182,6 @@ mod test
   fn test_difficult_cases()
   {
     assert_eq!(indent!(2, "\nx"), "\n  x");
-  }
-
-  #[test]
-  fn only_indent_after_a_certain_index()
-  {
-    assert_eq!(indent!(2, "x\ny\nz\nu\nv\nw", 6), "x\ny\nz\n  u\n  v\n  w");
   }
 
   proptest!
