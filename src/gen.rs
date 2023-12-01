@@ -47,12 +47,8 @@ where F: Fn(&str) -> Fmt_Result
         let _tmp_buffer;
         let new_code = match f(identifier)?
         {
-          Some(mut generated_code) => 
+          Some(generated_code) => 
           {
-            if generated_code.as_bytes().last().copied().unwrap_or(b'\n') != b'\n'
-            {
-              generated_code += "\n";
-            }
             _tmp_buffer = begin.indentation.indent_str(generated_code.as_str());
             _tmp_buffer.as_str()
           }

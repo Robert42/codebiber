@@ -14,14 +14,15 @@ fn indent_lines(input: &str, indentation: usize) -> String
   let mut output = String::with_capacity((input.len()+1)*(indentation+1));
 
   let indentation = std::iter::repeat(' ').take(indentation);
-  for (i, line) in input.lines().enumerate()
+  for line in input.lines()
   {
-    if i != 0 { output.push('\n'); }
-    if line.is_empty() {continue}
-    output.extend(indentation.clone());
-    output.push_str(line);
+    if !line.is_empty()
+    {
+      output.extend(indentation.clone());
+      output.push_str(line);
+    }
+    output.push('\n');
   }
-  if input.as_bytes().last().copied() == Some(b'\n') { output.push('\n'); }
 
   output
 }
@@ -51,37 +52,37 @@ mod test
   fn test_trivial()
   {
     assert_eq!(indent!(0, ""), "");
-    assert_eq!(indent!(0, "x"), "x");
-    assert_eq!(indent!(0, "x\ny"), "x\ny");
+    assert_eq!(indent!(0, "x"), "x\n");
+    assert_eq!(indent!(0, "x\ny"), "x\ny\n");
   }
 
   #[test]
   fn test_simpl()
   {
     assert_eq!(indent!(2, ""), "");
-    assert_eq!(indent!(2, "x"), "  x");
-    assert_eq!(indent!(2, "x\ny"), "  x\n  y");
-    assert_eq!(indent!(4, "Hello, World!"), "    Hello, World!");
+    assert_eq!(indent!(2, "x"), "  x\n");
+    assert_eq!(indent!(2, "x\ny"), "  x\n  y\n");
+    assert_eq!(indent!(4, "Hello, World!"), "    Hello, World!\n");
   }
 
   #[test]
   fn test_with_lienbreak()
   {
-    assert_eq!(indent!(2, "x\ny\nz"), "  x\n  y\n  z");
+    assert_eq!(indent!(2, "x\ny\nz"), "  x\n  y\n  z\n");
   }
 
   #[test]
   fn test_dont_add_trailing_whitespace()
   {
-    assert_eq!(indent!(2, "x\n\n\ny"), "  x\n\n\n  y");
-    assert_eq!(indent!(2, "x\n\ny\n\n\nz"), "  x\n\n  y\n\n\n  z");
+    assert_eq!(indent!(2, "x\n\n\ny"), "  x\n\n\n  y\n");
+    assert_eq!(indent!(2, "x\n\ny\n\n\nz"), "  x\n\n  y\n\n\n  z\n");
     assert_eq!(indent!(2, "x\n"), "  x\n");
   }
 
   #[test]
   fn test_difficult_cases()
   {
-    assert_eq!(indent!(2, "\nx"), "\n  x");
+    assert_eq!(indent!(2, "\nx"), "\n  x\n");
   }
 }
 
