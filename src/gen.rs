@@ -50,16 +50,22 @@ where F: Fn(&str, &mut String) -> Codegen_Result
         let generated_begin = generated.len();
         match f(identifier, &mut generated)?
         {
-          USE => (),
-          IGNORE => todo!(),
+          USE => 
+          {
+            if generated.as_bytes().last().copied() != Some(b'\n')
+            {
+              generated += "\n";
+            }
+            begin.indentation.indent_subrange(&mut generated, generated_begin..);
+          }
+          IGNORE =>
+          {
+            generated.truncate(generated_begin);
+            generated += old_code;
+          }
         }
-        if generated.as_bytes().last().copied() != Some(b'\n')
-        {
-          generated += "\n";
-        }
-        begin.indentation.indent_subrange(&mut generated, generated_begin..);
-        let new_code = &generated[generated_begin..];
 
+        let new_code = &generated[generated_begin..];
         let new_checksum = blake3::hash(new_code.as_bytes());
 
         write!(&mut generated, "{i}{before}<< /codegen ", i=begin.indentation, before=end.before_marker)?;
@@ -206,6 +212,7 @@ mod test
     fn gen(n: &str, out: &mut String) -> Codegen_Result
     {
       match n
+
       {
         "x" => write!(out, "42\n137\n1337")?,
         n => todo!("{n}"),
@@ -215,6 +222,28 @@ mod test
 
     assert_eq!(generate("<< codegen x >>\n<< /codegen >>", CFG, gen).pretty_unwrap(), Some("<< codegen x >>\n42\n137\n1337\n<< /codegen >>\n".to_owned()));
     assert_eq!(generate("  << codegen x >>\n<< /codegen >>", CFG, gen).pretty_unwrap(), Some("  << codegen x >>\n  42\n  137\n  1337\n  << /codegen >>\n".to_owned()));
+  }
+  
+  #[test]
+  fn allow_skipping_sections()
+  {
+    fn ignore(_n: &str, _out: &mut String) -> Codegen_Result
+    {
+      Ok(IGNORE)
+    }
+
+    assert_eq!(generate("<< codegen x >>\nxyuz\nuv\n<< /codegen >>", CFG, ignore).pretty_unwrap(), None);
+    assert_eq!(generate("  << codegen x >>\nxyuz\n  <>\n    []\nuv\n<< /codegen >>", CFG, ignore).pretty_unwrap(), None);
+
+    fn ignore_but_add_some_bytes(_n: &str, out: &mut String) -> Codegen_Result
+    {
+      write!(out, "this should be undone!")?;
+      Ok(IGNORE)
+    }
+
+    assert_eq!(generate("<< codegen x >>\nxyuz\nuv\n<< /codegen >>", CFG, ignore_but_add_some_bytes).pretty_unwrap(), None);
+    assert_eq!(generate("  << codegen x >>\nxyuz\n  <>\n    []\nuv\n<< /codegen >>", CFG, ignore_but_add_some_bytes).pretty_unwrap(), None);
+
   }
 }
 
