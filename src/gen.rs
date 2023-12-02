@@ -102,7 +102,7 @@ impl Config
 {
   pub fn is_valid(&self) -> bool
   {
-    self.checksum_bytes_to_store <= 32
+    self.checksum_bytes_to_store <= 64
   }
 }
 

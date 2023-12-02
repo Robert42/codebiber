@@ -12,6 +12,8 @@ enum Section
 
 use Section::*;
 
+extern crate codemask;
+
 fn format_input(sections: &[Section], tailing_newline: bool) -> String
 {
   let mut code = String::new();
@@ -25,8 +27,9 @@ fn format_input(sections: &[Section], tailing_newline: bool) -> String
   set_tailing_linebreak(code, tailing_newline)
 }
 
-fn format_expected_output(sections: &[Section], tailing_newline: bool) -> String
+fn format_expected_output(sections: &[Section], tailing_newline: bool) -> Option<String>
 {
+  let mut has_some_change = false;
   let mut code = String::new();
   for s in sections.into_iter()
   {
@@ -35,18 +38,31 @@ fn format_expected_output(sections: &[Section], tailing_newline: bool) -> String
       HANDWRITTEN(c) => code += c.as_str(),
     }
   }
-  set_tailing_linebreak(code, tailing_newline)
+
+  if has_some_change
+  {
+    return Some(set_tailing_linebreak(code, tailing_newline));
+  }
+  else
+  {
+    return None;
+  }
 }
 
 proptest!
 {
   #[test]
-  fn roundtrip(sections in many_sections(), hash_bytes in 0..64, tailing_newline: bool)
+  fn roundtrip(sections in many_sections(), hash_bytes in 0..64_u8, tailing_newline: bool)
   {
+    let cfg = codemask::Config{
+      checksum_bytes_to_store: hash_bytes,
+    };
     let input = format_input(&sections[..], tailing_newline);
     let expected = format_expected_output(&sections[..], tailing_newline);
 
-    assert_eq!(input, expected);
+    let actual = codemask::generate(input.as_str(), cfg, |_| Ok(None)).unwrap();
+
+    assert_eq!(actual, expected);
   }
 }
 
