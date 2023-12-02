@@ -39,13 +39,10 @@ fn format_expected_output(sections: &[Section], tailing_newline: bool) -> Option
     }
   }
 
-  if has_some_change
+  match has_some_change
   {
-    return Some(set_tailing_linebreak(code, tailing_newline));
-  }
-  else
-  {
-    return None;
+    true => Some(set_tailing_linebreak(code, tailing_newline)),
+    false => None,
   }
 }
 
