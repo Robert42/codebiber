@@ -102,7 +102,7 @@ impl Config
 {
   pub fn is_valid(&self) -> bool
   {
-    self.checksum_bytes_to_store <= 64
+    self.checksum_bytes_to_store <= blake3::KEY_LEN as u8
   }
 }
 

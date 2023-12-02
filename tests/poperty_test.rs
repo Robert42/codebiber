@@ -4,6 +4,8 @@ use proptest::prelude::*;
 #[macro_use]
 extern crate lazy_regex;
 
+extern crate blake3;
+
 #[derive(Clone, Debug)]
 enum Section
 {
@@ -72,7 +74,7 @@ fn many_sections() -> impl Strategy<Value = Vec<Section>>
 fn config() -> impl Strategy<Value = codemask::Config>
 {
   prop_oneof![
-    (0..64_u8).prop_map(|checksum_bytes_to_store|
+    (0..(blake3::KEY_LEN as u8)).prop_map(|checksum_bytes_to_store|
       codemask::Config{
         checksum_bytes_to_store,
     }),
