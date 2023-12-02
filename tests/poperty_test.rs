@@ -49,11 +49,8 @@ fn format_expected_output(sections: &[Section], tailing_newline: bool) -> Option
 proptest!
 {
   #[test]
-  fn roundtrip(sections in many_sections(), hash_bytes in 0..64_u8, tailing_newline: bool)
+  fn roundtrip(sections in many_sections(), cfg in config(), tailing_newline: bool)
   {
-    let cfg = codemask::Config{
-      checksum_bytes_to_store: hash_bytes,
-    };
     let input = format_input(&sections[..], tailing_newline);
     let expected = format_expected_output(&sections[..], tailing_newline);
 
@@ -70,6 +67,16 @@ fn many_sections() -> impl Strategy<Value = Vec<Section>>
   ];
 
   prop::collection::vec(section, 0..16)
+}
+
+fn config() -> impl Strategy<Value = codemask::Config>
+{
+  prop_oneof![
+    (0..64_u8).prop_map(|checksum_bytes_to_store|
+      codemask::Config{
+        checksum_bytes_to_store,
+    }),
+  ]
 }
 
 fn code() -> impl Strategy<Value = String>

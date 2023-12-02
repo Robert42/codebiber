@@ -2,7 +2,7 @@ use super::*;
 
 use super::parse_file::{find as parse_sections, Section};
 
-#[derive(Default)]
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub struct Config
 {
   pub checksum_bytes_to_store: u8,
