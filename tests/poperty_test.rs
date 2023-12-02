@@ -78,7 +78,7 @@ fn many_sections() -> impl Strategy<Value = Vec<Section>>
 fn code() -> impl Strategy<Value = String>
 {
   prop_oneof![
-    ".*".prop_filter("regular code is not allowed to contain `<< codegen`",
+    "(\n)?(.*\n)*.*(\n)?".prop_filter("regular code is not allowed to contain `<< codegen`",
       |code| !regex_is_match!("<< *\\/?codegen", &code)
     )
   ]
