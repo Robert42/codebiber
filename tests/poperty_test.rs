@@ -1,3 +1,7 @@
+#![allow(non_camel_case_types)]
+
+use codemask::Indentation;
+
 extern crate proptest;
 use proptest::prelude::*;
 
@@ -10,41 +14,98 @@ extern crate blake3;
 enum Section
 {
   HANDWRITTEN(String),
+  GENERATED{code: String, name: String, surround: [Surround; 2], generated_with_config: codemask::Config, action: Action},
+}
+
+#[derive(Clone, Debug)]
+enum Action
+{
+  SKIP,
+  KEEP,
+  REPLACE_WITH(String),
 }
 
 use Section::*;
+use Action::*;
 
 extern crate codemask;
 
 fn format_input(sections: &[Section], tailing_newline: bool) -> String
 {
-  let mut code = String::new();
-  for s in sections.into_iter()
+  let mut out = String::new();
+  for s in sections.iter()
   {
     match s
     {
-      HANDWRITTEN(c) => code += c.as_str(),
+      HANDWRITTEN(c) => out += c.as_str(),
+      GENERATED{code, name, generated_with_config, surround, action: _} =>
+        format_generated_code(&mut out, code.as_str(), name.as_str(), surround, *generated_with_config).unwrap(),
     }
   }
-  set_tailing_linebreak(code, tailing_newline)
+  set_tailing_linebreak(out, tailing_newline)
 }
 
-fn format_expected_output(sections: &[Section], tailing_newline: bool) -> Option<String>
+fn format_expected_output(sections: &[Section], cfg: codemask::Config, tailing_newline: bool) -> Option<String>
 {
   let mut has_some_change = false;
-  let mut code = String::new();
-  for s in sections.into_iter()
+  let mut out = String::new();
+  for s in sections.iter()
   {
     match s
     {
-      HANDWRITTEN(c) => code += c.as_str(),
+      HANDWRITTEN(c) => out += c.as_str(),
+      GENERATED{code: old_code, name, generated_with_config: _, surround, action} => {
+        let code = match action {
+          SKIP | KEEP => old_code,
+          REPLACE_WITH(new_code) => {has_some_change = true; new_code}
+        };
+        format_generated_code(&mut out, code.as_str(), name.as_str(), surround, cfg).unwrap()
+      }
     }
   }
 
   match has_some_change
   {
-    true => Some(set_tailing_linebreak(code, tailing_newline)),
+    true => Some(set_tailing_linebreak(out, tailing_newline)),
     false => None,
+  }
+}
+
+fn format_generated_code(out: &mut String, code: &str, name: &str, surround: &[Surround; 2], config: codemask::Config) -> std::fmt::Result
+{
+  use std::fmt::Write;
+  surround[0].write(out, false, Some(name))?;
+  writeln!(out, "{code}")?;
+  match config.checksum_bytes_to_store
+  {
+    0 => surround[1].write::<&str>(out, true, None),
+    n => surround[1].write(out, true, Some(&blake3::hash(code.as_bytes()).to_hex()[..2*n as usize])),
+  }
+}
+
+#[derive(Clone, Debug)]
+struct Surround
+{
+  before: String,
+  after: String,
+  indent: Indentation,
+}
+
+impl Surround
+{
+  fn write<Suffix: std::fmt::Display>(&self, out: &mut String, closing: bool, suffix: Option<Suffix>) -> std::fmt::Result
+  {
+    use std::fmt::Write;
+    if !out.is_empty() && !out.ends_with('\n') {out.push('\n');}
+    
+    write!(out, "{}{}<< {}codegen", self.indent, self.before, if closing {"/"} else {""})?;
+    if let Some(suffix) = suffix
+    {
+      write!(out, " {}", suffix)?;
+    }
+    writeln!(out, " >>{}", self.after)?;
+
+    Ok(())
   }
 }
 
@@ -54,9 +115,16 @@ proptest!
   fn roundtrip(sections in many_sections(), cfg in config(), tailing_newline: bool)
   {
     let input = format_input(&sections[..], tailing_newline);
-    let expected = format_expected_output(&sections[..], tailing_newline);
+    let expected = format_expected_output(&sections[..], cfg, tailing_newline);
 
-    let actual = codemask::generate(input.as_str(), cfg, |_| Ok(None)).unwrap();
+    let mut codes : Vec<Option<String>> = sections.iter().filter_map(|s| match s {
+        HANDWRITTEN(_) => None,
+        GENERATED { action: SKIP, .. } => Some(None),
+        GENERATED { action: KEEP, code, .. }
+        | GENERATED { action: REPLACE_WITH(code), .. } => Some(Some(code.clone())),
+    }).collect();
+    codes.reverse();
+    let actual = codemask::generate(input.as_str(), cfg, move |_| Ok(codes.pop().unwrap())).unwrap();
 
     assert_eq!(actual, expected);
   }
@@ -64,8 +132,18 @@ proptest!
 
 fn many_sections() -> impl Strategy<Value = Vec<Section>>
 {
+  let action = prop_oneof![
+    Just(SKIP),
+    Just(KEEP),
+    code().prop_map(|code| REPLACE_WITH(code)),
+  ];
+
+  let surround = [surround(), surround()];
+
   let section = prop_oneof![
     code().prop_map(|code| Section::HANDWRITTEN(code)),
+    (code(), ident(), config(), surround, action).prop_map(|(code, name, generated_with_config, surround, action)|
+      Section::GENERATED{code, name, generated_with_config, surround, action}),
   ];
 
   prop::collection::vec(section, 0..16)
@@ -81,13 +159,32 @@ fn config() -> impl Strategy<Value = codemask::Config>
   ]
 }
 
+fn surround() -> impl Strategy<Value = Surround>
+{
+  let indent = (..u8::MAX).prop_map(|i| Indentation(i.into()));
+  let surround = (inline_code(), inline_code(), indent).prop_map(|(before, after, indent)| Surround{before, after, indent});
+  surround
+}
+
 fn code() -> impl Strategy<Value = String>
 {
-  prop_oneof![
-    "(\n)?(.*\n)*.*(\n)?".prop_filter("regular code is not allowed to contain `<< codegen`",
-      |code| !regex_is_match!("<< *\\/?codegen", &code)
-    )
-  ]
+  "(\n)?(.*\n)*.*(\n)?".prop_filter(
+    "regular code is not allowed to contain `<< codegen`",
+    no_marker)
+}
+
+fn inline_code() -> impl Strategy<Value = String>
+{
+  "[^\n]*".prop_filter(
+    "regular code is not allowed to contain `<< codegen`",
+    no_marker)
+}
+
+fn no_marker<S: AsRef<str>>(code: &S) -> bool {!regex_is_match!("<< *\\/?codegen", code.as_ref())}
+
+fn ident() -> impl Strategy<Value = String>
+{
+  "[_a-zA-Z][_a-zA-Z0-9]*"
 }
 
 fn set_tailing_linebreak(mut code: String, expect_tailing_linebreak: bool) -> String

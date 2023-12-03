@@ -10,8 +10,8 @@ pub struct Config
 
 pub type Fmt_Result<T=Option<String>> = std::result::Result<T, std::fmt::Error>;
 
-pub fn generate<F>(input: &str, cfg: Config, f: F) -> Result<Option<String>>
-where F: Fn(&str) -> Fmt_Result
+pub fn generate<F>(input: &str, cfg: Config, mut f: F) -> Result<Option<String>>
+where F: FnMut(&str) -> Fmt_Result
 {
   debug_assert!(cfg.is_valid());
 

@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc dc9aa27494bca46f5a7675ae1b2372b81aecdf042c34e01b2eb634aa24e504cd # shrinks to sections = [GENERATED { code: "", name: "_", generated_with_config: Config { checksum_bytes_to_store: 0 }, action: SKIP }], cfg = Config { checksum_bytes_to_store: 0 }, tailing_newline = false
