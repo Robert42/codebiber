@@ -119,7 +119,7 @@ impl Surround_Marker
   fn write<Suffix: std::fmt::Display>(&self, out: &mut String, closing: bool, indent: Indentation, suffix: Option<Suffix>) -> std::fmt::Result
   {
     use std::fmt::Write;
-    if !out.is_empty() && !out.ends_with('\n') {out.push('\n');}
+    ensure_newline(out);
     
     write!(out, "{}{}<< {}codegen", indent, self.before, if closing {"/"} else {""})?;
     if let Some(suffix) = suffix
@@ -229,4 +229,9 @@ fn set_tailing_linebreak(mut code: String, expect_tailing_linebreak: bool) -> St
   }
 
   code
+}
+
+fn ensure_newline(code: &mut String)
+{
+  if !code.is_empty() && !code.ends_with('\n') {code.push('\n');}
 }
