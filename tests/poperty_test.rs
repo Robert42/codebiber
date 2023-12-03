@@ -14,7 +14,7 @@ extern crate blake3;
 enum Section
 {
   HANDWRITTEN(String, bool),
-  GENERATED{code: String, name: String, surround: [Surround; 2], generated_with_config: codemask::Config, action: Action},
+  GENERATED{code: String, name: String, surround: Surround, generated_with_config: codemask::Config, action: Action},
 }
 
 #[derive(Clone, Debug)]
@@ -78,34 +78,56 @@ fn format_expected_output(sections: &[Section], cfg: codemask::Config) -> Option
   }
 }
 
-fn format_generated_code(out: &mut String, code: &str, name: &str, surround: &[Surround; 2], config: codemask::Config) -> std::fmt::Result
+fn format_generated_code(out: &mut String, code: &str, name: &str, surround: &Surround, config: codemask::Config) -> std::fmt::Result
 {
   use std::fmt::Write;
-  surround[0].write(out, false, Some(name))?;
+  surround.begin(out, Some(name))?;
   write!(out, "{code}")?;
-  match config.checksum_bytes_to_store
+  let hash = blake3::hash(code.as_bytes()).to_hex();
+  let suffix = match config.checksum_bytes_to_store
   {
-    0 => surround[1].write::<&str>(out, true, None),
-    n => surround[1].write(out, true, Some(&blake3::hash(code.as_bytes()).to_hex()[..2*n as usize])),
-  }
+    0 => None,
+    n => Some(&hash[..2*n as usize]),
+  };
+  surround.end::<&str>(out, suffix)
 }
 
 #[derive(Clone, Debug)]
 struct Surround
 {
+  begin: Surround_Marker,
+  end: Surround_Marker,
+  indent: Indentation,
+}
+
+#[derive(Clone, Debug)]
+struct Surround_Marker
+{
   before: String,
   after: String,
-  indent: Indentation,
 }
 
 impl Surround
 {
-  fn write<Suffix: std::fmt::Display>(&self, out: &mut String, closing: bool, suffix: Option<Suffix>) -> std::fmt::Result
+  fn begin<Suffix: std::fmt::Display>(&self, out: &mut String, suffix: Option<Suffix>) -> std::fmt::Result
+  {
+    self.begin.write(out, false, self.indent, suffix)
+  }
+
+  fn end<Suffix: std::fmt::Display>(&self, out: &mut String, suffix: Option<Suffix>) -> std::fmt::Result
+  {
+    self.end.write(out, true, self.indent, suffix)
+  }
+}
+
+impl Surround_Marker
+{
+  fn write<Suffix: std::fmt::Display>(&self, out: &mut String, closing: bool, indent: Indentation, suffix: Option<Suffix>) -> std::fmt::Result
   {
     use std::fmt::Write;
     if !out.is_empty() && !out.ends_with('\n') {out.push('\n');}
     
-    write!(out, "{}{}<< {}codegen", self.indent, self.before, if closing {"/"} else {""})?;
+    write!(out, "{}{}<< {}codegen", indent, self.before, if closing {"/"} else {""})?;
     if let Some(suffix) = suffix
     {
       write!(out, " {}", suffix)?;
@@ -145,7 +167,7 @@ fn many_sections() -> impl Strategy<Value = Vec<Section>>
     code().prop_map(|code| REPLACE_WITH(code)),
   ];
 
-  let surround = [surround(), surround()];
+  let surround = surround();
 
   let section = prop_oneof![
     (code(), prop::bool::ANY).prop_map(|(code, tailing_linebreak)| Section::HANDWRITTEN(code, tailing_linebreak)),
@@ -169,7 +191,13 @@ fn config() -> impl Strategy<Value = codemask::Config>
 fn surround() -> impl Strategy<Value = Surround>
 {
   let indent = (..u8::MAX).prop_map(|i| Indentation(i.into()));
-  let surround = (inline_code(), inline_code(), indent).prop_map(|(before, after, indent)| Surround{before, after, indent});
+  let surround = (surround_marker(), surround_marker(), indent).prop_map(|(begin, end, indent)| Surround{begin, end, indent});
+  surround
+}
+
+fn surround_marker() -> impl Strategy<Value = Surround_Marker>
+{
+  let surround = (inline_code(), inline_code()).prop_map(|(before, after)| Surround_Marker{before, after});
   surround
 }
 
