@@ -74,6 +74,8 @@ fn format_expected_output(sections: &[Section], cfg: codemask::Config) -> Option
 
 fn format_generated_code(out: &mut String, code: &str, name: &str, surround: &Surround, config: codemask::Config) -> std::fmt::Result
 {
+  let code = surround.indent.indent_str(code);
+
   use std::fmt::Write;
   surround.begin(out, Some(name))?;
   write!(out, "{code}")?;
