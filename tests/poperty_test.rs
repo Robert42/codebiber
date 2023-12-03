@@ -13,7 +13,7 @@ extern crate blake3;
 #[derive(Clone, Debug)]
 enum Section
 {
-  HANDWRITTEN(String),
+  HANDWRITTEN(String, bool),
   GENERATED{code: String, name: String, surround: [Surround; 2], generated_with_config: codemask::Config, action: Action},
 }
 
@@ -30,22 +30,25 @@ use Action::*;
 
 extern crate codemask;
 
-fn format_input(sections: &[Section], tailing_newline: bool) -> String
+fn format_input(sections: &[Section]) -> String
 {
   let mut out = String::new();
   for s in sections.iter()
   {
     match s
     {
-      HANDWRITTEN(c) => out += c.as_str(),
+      HANDWRITTEN(c, t) => {
+        out += c.as_str();
+        set_tailing_linebreak(&mut out, *t);
+      }
       GENERATED{code, name, generated_with_config, surround, action: _} =>
         format_generated_code(&mut out, code.as_str(), name.as_str(), surround, *generated_with_config).unwrap(),
     }
   }
-  set_tailing_linebreak(out, tailing_newline)
+  out
 }
 
-fn format_expected_output(sections: &[Section], cfg: codemask::Config, tailing_newline: bool) -> Option<String>
+fn format_expected_output(sections: &[Section], cfg: codemask::Config) -> Option<String>
 {
   let mut has_some_change = false;
   let mut out = String::new();
@@ -53,11 +56,14 @@ fn format_expected_output(sections: &[Section], cfg: codemask::Config, tailing_n
   {
     match s
     {
-      HANDWRITTEN(c) => out += c.as_str(),
-      GENERATED{code: old_code, name, generated_with_config: _, surround, action} => {
+      HANDWRITTEN(c, t) => {
+        out += c.as_str();
+        set_tailing_linebreak(&mut out, *t);
+      }
+      GENERATED{code: old_code, name, generated_with_config, surround, action} => {
         let code = match action {
           SKIP | KEEP => old_code,
-          REPLACE_WITH(new_code) => {has_some_change = true; new_code}
+          REPLACE_WITH(new_code) => {has_some_change = has_some_change || new_code!=old_code; new_code}
         };
         format_generated_code(&mut out, code.as_str(), name.as_str(), surround, cfg).unwrap()
       }
@@ -66,7 +72,7 @@ fn format_expected_output(sections: &[Section], cfg: codemask::Config, tailing_n
 
   match has_some_change
   {
-    true => Some(set_tailing_linebreak(out, tailing_newline)),
+    true => Some(out),
     false => None,
   }
 }
@@ -112,13 +118,13 @@ impl Surround
 proptest!
 {
   #[test]
-  fn roundtrip(sections in many_sections(), cfg in config(), tailing_newline: bool)
+  fn roundtrip(sections in many_sections(), cfg in config())
   {
-    let input = format_input(&sections[..], tailing_newline);
-    let expected = format_expected_output(&sections[..], cfg, tailing_newline);
+    let input = format_input(&sections[..]);
+    let expected = format_expected_output(&sections[..], cfg);
 
     let mut codes : Vec<Option<String>> = sections.iter().filter_map(|s| match s {
-        HANDWRITTEN(_) => None,
+        HANDWRITTEN(..) => None,
         GENERATED { action: SKIP, .. } => Some(None),
         GENERATED { action: KEEP, code, .. }
         | GENERATED { action: REPLACE_WITH(code), .. } => Some(Some(code.clone())),
@@ -141,7 +147,7 @@ fn many_sections() -> impl Strategy<Value = Vec<Section>>
   let surround = [surround(), surround()];
 
   let section = prop_oneof![
-    code().prop_map(|code| Section::HANDWRITTEN(code)),
+    (code(), prop::bool::ANY).prop_map(|(code, tailing_linebreak)| Section::HANDWRITTEN(code, tailing_linebreak)),
     (code(), ident(), config(), surround, action).prop_map(|(code, name, generated_with_config, surround, action)|
       Section::GENERATED{code, name, generated_with_config, surround, action}),
   ];
@@ -187,7 +193,7 @@ fn ident() -> impl Strategy<Value = String>
   "[_a-zA-Z][_a-zA-Z0-9]*"
 }
 
-fn set_tailing_linebreak(mut code: String, expect_tailing_linebreak: bool) -> String
+fn set_tailing_linebreak(code: &mut String, expect_tailing_linebreak: bool)
 {
   let len = code.len();
   let ends_with_linebreak = code.as_bytes().last().cloned() == Some(b'\n');
@@ -198,6 +204,4 @@ fn set_tailing_linebreak(mut code: String, expect_tailing_linebreak: bool) -> St
     (false, true) => code.truncate(len-1),
     (true, false) => code.push('\n'),
   }
-
-  code
 }
