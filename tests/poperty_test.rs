@@ -61,6 +61,7 @@ fn format_expected_output(sections: &[Section], cfg: codemask::Config) -> Option
         set_tailing_linebreak(&mut out, *t);
       }
       GENERATED{code: old_code, name, generated_with_config, surround, action} => {
+        has_some_change = has_some_change || generated_with_config!=&cfg;
         let code = match action {
           SKIP | KEEP => old_code,
           REPLACE_WITH(new_code) => {has_some_change = has_some_change || new_code!=old_code; new_code}
