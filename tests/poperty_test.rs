@@ -75,7 +75,7 @@ fn format_generated_code(out: &mut String, code: &str, name: &str, surround: &[S
 {
   use std::fmt::Write;
   surround[0].write(out, false, Some(name))?;
-  writeln!(out, "{code}")?;
+  write!(out, "{code}")?;
   match config.checksum_bytes_to_store
   {
     0 => surround[1].write::<&str>(out, true, None),
