@@ -5,3 +5,4 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc dc9aa27494bca46f5a7675ae1b2372b81aecdf042c34e01b2eb634aa24e504cd # shrinks to sections = [GENERATED { code: "", name: "_", generated_with_config: Config { checksum_bytes_to_store: 0 }, action: SKIP }], cfg = Config { checksum_bytes_to_store: 0 }, tailing_newline = false
+cc f484c729fcaf8d4663bd4ce4387b9e90e1f1094e03e0db56bbc9dddb0856ef48 # shrinks to sections = [GENERATED { code: "", name: "A", surround: Surround { begin: Surround_Marker { before: "", after: "" }, end: Surround_Marker { before: "", after: "\r" }, indent: Indentation(0) }, generated_with_config: Config { checksum_bytes_to_store: 0 }, action: SKIP }], cfg = Config { checksum_bytes_to_store: 1 }
