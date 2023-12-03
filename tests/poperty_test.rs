@@ -13,7 +13,7 @@ extern crate blake3;
 #[derive(Clone, Debug)]
 enum Section
 {
-  HANDWRITTEN(String, bool),
+  HANDWRITTEN(String),
   GENERATED{code: String, name: String, surround: Surround, generated_with_config: codemask::Config, action: Action},
 }
 
@@ -37,10 +37,7 @@ fn format_input(sections: &[Section]) -> String
   {
     match s
     {
-      HANDWRITTEN(c, t) => {
-        out += c.as_str();
-        set_tailing_linebreak(&mut out, *t);
-      }
+      HANDWRITTEN(c) => out += c.as_str(),
       GENERATED{code, name, generated_with_config, surround, action: _} =>
         format_generated_code(&mut out, code.as_str(), name.as_str(), surround, *generated_with_config).unwrap(),
     }
@@ -56,10 +53,7 @@ fn format_expected_output(sections: &[Section], cfg: codemask::Config) -> Option
   {
     match s
     {
-      HANDWRITTEN(c, t) => {
-        out += c.as_str();
-        set_tailing_linebreak(&mut out, *t);
-      }
+      HANDWRITTEN(c) => out += c.as_str(),
       GENERATED{code: old_code, name, generated_with_config, surround, action} => {
         has_some_change = has_some_change || generated_with_config!=&cfg;
         let code = match action {
@@ -170,7 +164,7 @@ fn many_sections() -> impl Strategy<Value = Vec<Section>>
   let surround = surround();
 
   let section = prop_oneof![
-    (code(), prop::bool::ANY).prop_map(|(code, tailing_linebreak)| Section::HANDWRITTEN(code, tailing_linebreak)),
+    (code(), prop::bool::ANY).prop_map(|(code, tailing_linebreak)| Section::HANDWRITTEN(set_tailing_linebreak(code, tailing_linebreak))),
     (code(), ident(), config(), surround, action).prop_map(|(code, name, generated_with_config, surround, action)|
       Section::GENERATED{code, name, generated_with_config, surround, action}),
   ];
@@ -222,7 +216,7 @@ fn ident() -> impl Strategy<Value = String>
   "[_a-zA-Z][_a-zA-Z0-9]*"
 }
 
-fn set_tailing_linebreak(code: &mut String, expect_tailing_linebreak: bool)
+fn set_tailing_linebreak(mut code: String, expect_tailing_linebreak: bool) -> String
 {
   let len = code.len();
   let ends_with_linebreak = code.as_bytes().last().cloned() == Some(b'\n');
@@ -233,4 +227,6 @@ fn set_tailing_linebreak(code: &mut String, expect_tailing_linebreak: bool)
     (false, true) => code.truncate(len-1),
     (true, false) => code.push('\n'),
   }
+
+  code
 }
