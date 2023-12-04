@@ -18,7 +18,7 @@ checksum = @{ (ASCII_HEX_DIGIT{2}){1,16} }
 
 s = _{ " " }
 any_char = _{ !newline ~ ANY }
-newline = _{ NEWLINE }
+newline = _{ "\n" }
 
 // tets only
 line = { code_line | begin_marker_line | end_marker_line }
