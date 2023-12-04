@@ -152,7 +152,7 @@ proptest!
     codes.reverse();
     let actual = codemask::generate(input.as_str(), cfg, move |_| Ok(codes.pop().unwrap())).pretty_expect_with_code(input.as_str());
 
-    assert_eq!(actual, expected);
+    assert_eq!(actual, expected, "   input: {:?}", input.as_str());
   }
 }
 
@@ -194,10 +194,7 @@ fn surround() -> impl Strategy<Value = Surround>
 
 fn surround_marker() -> impl Strategy<Value = Surround_Marker>
 {
-  let before = inline_code().prop_filter("surround_marker() /* before */", |code| !code.ends_with('<') && !code.contains("<<"));
-  let after = inline_code();
-
-  let surround = (before, after).prop_map(|(before, after)| Surround_Marker{before, after});
+  let surround = (before_marker(), after_marker()).prop_map(|(before, after)| Surround_Marker{before, after});
   surround
 }
 
@@ -208,7 +205,16 @@ fn code() -> impl Strategy<Value = String>
     no_marker)
 }
 
-fn inline_code() -> impl Strategy<Value = String>
+fn before_marker() -> impl Strategy<Value = String>
+{
+  "([^ \n]+[^\n]*)?"
+  .prop_filter("regular code is not allowed to contain `<< codegen`",
+    |code| no_marker(code) && !code.ends_with('<') && !code.contains("<<"))
+  .prop_filter("surround_marker() /* before */",
+    |code| no_marker(code) && !code.ends_with('<') && !code.contains("<<"))
+}
+
+fn after_marker() -> impl Strategy<Value = String>
 {
   "([^\n]*[^ \n][^\n]*)?".prop_filter(
     "regular code is not allowed to contain `<< codegen`",
