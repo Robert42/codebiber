@@ -150,7 +150,7 @@ proptest!
         | GENERATED { action: REPLACE_WITH(code), .. } => Some(Some(code.clone())),
     }).collect();
     codes.reverse();
-    let actual = codemask::generate(input.as_str(), cfg, move |_| Ok(codes.pop().unwrap())).pretty_unwrap();
+    let actual = codemask::generate(input.as_str(), cfg, move |_| Ok(codes.pop().unwrap())).pretty_expect_with_code(input.as_str());
 
     assert_eq!(actual, expected);
   }

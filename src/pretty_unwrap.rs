@@ -4,6 +4,9 @@ pub trait Pretty_Unwrap
 
   #[track_caller]
   fn pretty_unwrap(self) -> Self::Inner;
+
+  #[track_caller]
+  fn pretty_expect_with_code(self, code: &str) -> Self::Inner;
 }
 
 impl<T, E: std::fmt::Display> Pretty_Unwrap for Result<T, E>
@@ -18,6 +21,19 @@ impl<T, E: std::fmt::Display> Pretty_Unwrap for Result<T, E>
       Err(e) =>
       {
         panic!("{e}");
+      }
+    }
+  }
+
+  #[track_caller]
+  fn pretty_expect_with_code(self, code: &str) -> Self::Inner
+  {
+    match self
+    {
+      Ok(x) => x,
+      Err(e) =>
+      {
+        panic!("{e}\ncode:\n```\n{code}\n```");
       }
     }
   }
