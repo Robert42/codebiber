@@ -1,7 +1,9 @@
 #![allow(non_camel_case_types)]
 
-use codemask::Indentation;
-use codemask::Pretty_Unwrap;
+extern crate codemask;
+use codemask::{
+  Indentation, Pretty_Unwrap, Config, generate,
+};
 
 extern crate proptest;
 use proptest::prelude::*;
@@ -15,7 +17,7 @@ extern crate blake3;
 enum Section
 {
   HANDWRITTEN(String),
-  GENERATED{code: String, name: String, surround: Surround, generated_with_config: codemask::Config, action: Action},
+  GENERATED{code: String, name: String, surround: Surround, generated_with_config: Config, action: Action},
 }
 
 #[derive(Clone, Debug)]
@@ -28,8 +30,6 @@ enum Action
 
 use Section::*;
 use Action::*;
-
-extern crate codemask;
 
 fn format_input(sections: &[Section]) -> String
 {
@@ -46,7 +46,7 @@ fn format_input(sections: &[Section]) -> String
   out
 }
 
-fn format_expected_output(sections: &[Section], cfg: codemask::Config) -> Option<String>
+fn format_expected_output(sections: &[Section], cfg: Config) -> Option<String>
 {
   let mut has_some_change = false;
   let mut out = String::new();
@@ -73,7 +73,7 @@ fn format_expected_output(sections: &[Section], cfg: codemask::Config) -> Option
   }
 }
 
-fn format_generated_code(out: &mut String, code: &str, name: &str, surround: &Surround, config: codemask::Config) -> std::fmt::Result
+fn format_generated_code(out: &mut String, code: &str, name: &str, surround: &Surround, config: Config) -> std::fmt::Result
 {
   let code = surround.indent.indent_str(code);
 
@@ -150,7 +150,7 @@ proptest!
         | GENERATED { action: REPLACE_WITH(code), .. } => Some(Some(code.clone())),
     }).collect();
     codes.reverse();
-    let actual = codemask::generate(input.as_str(), cfg, move |_| Ok(codes.pop().unwrap())).pretty_expect_with_code(input.as_str());
+    let actual = generate(input.as_str(), cfg, move |_| Ok(codes.pop().unwrap())).pretty_expect_with_code(input.as_str());
 
     assert_eq!(actual, expected, "   input: {:?}", input.as_str());
   }
@@ -175,11 +175,11 @@ fn many_sections() -> impl Strategy<Value = Vec<Section>>
   prop::collection::vec(section, 0..16)
 }
 
-fn config() -> impl Strategy<Value = codemask::Config>
+fn config() -> impl Strategy<Value = Config>
 {
   prop_oneof![
     (0..(blake3::KEY_LEN as u8)).prop_map(|checksum_bytes_to_store|
-      codemask::Config{
+      Config{
         checksum_bytes_to_store,
     }),
   ]
