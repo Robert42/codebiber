@@ -194,7 +194,10 @@ fn surround() -> impl Strategy<Value = Surround>
 
 fn surround_marker() -> impl Strategy<Value = Surround_Marker>
 {
-  let surround = (inline_code(), inline_code()).prop_map(|(before, after)| Surround_Marker{before, after});
+  let before = inline_code().prop_filter("surround_marker() /* before */", |code| !code.ends_with('<') && !code.contains("<<"));
+  let after = inline_code();
+
+  let surround = (before, after).prop_map(|(before, after)| Surround_Marker{before, after});
   surround
 }
 
