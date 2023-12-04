@@ -161,6 +161,7 @@ mod test
     const CKSM_2 : Config = Config{checksum_bytes_to_store: 2, .. CFG};
     const CKSM_4 : Config = Config{checksum_bytes_to_store: 4, .. CFG};
     const CKSM_5 : Config = Config{checksum_bytes_to_store: 5, .. CFG};
+    const CKSM_MAX : Config = Config{checksum_bytes_to_store: blake3::KEY_LEN as u8, .. CFG};
 
     fn gen(n: &str) -> Fmt_Result
     {
@@ -193,6 +194,10 @@ mod test
 
     // bug: dirty flag overwritten:
     assert_eq!(generate("<< codegen empty >>\n<< /codegen af13 >>\n<< codegen empty >>\n<< /codegen >>", CKSM_0, gen).pretty_unwrap(), Some("<< codegen empty >>\n<< /codegen >>\n<< codegen empty >>\n<< /codegen >>\n".to_owned()));
+
+    // max length
+    assert_eq!(generate("<< codegen empty >>\n<< /codegen af13>>", CKSM_MAX, gen).pretty_unwrap(), Some("<< codegen empty >>\n<< /codegen af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262 >>\n".to_owned()));
+    assert_eq!(generate("<< codegen empty >>\n<< /codegen af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262>>", CKSM_2, gen).pretty_unwrap(), Some("<< codegen empty >>\n<< /codegen af13 >>\n".to_owned()));
   }
   
   #[test]
