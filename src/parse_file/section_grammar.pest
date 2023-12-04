@@ -14,7 +14,7 @@ after_marker = { any_char* }
 
 indentation = @{ s* }
 identifier = @{ ("_" | ASCII_ALPHANUMERIC)+ }
-checksum = @{ (ASCII_HEX_DIGIT{2}){1,16} }
+checksum = @{ (ASCII_HEX_DIGIT{2}){1,32} }
 
 s = _{ " " }
 any_char = _{ !newline ~ ANY }
