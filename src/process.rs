@@ -1,11 +1,10 @@
 use super::*;
 
-pub fn process_file<P, F>(path: P, f: &F) -> Result
+pub fn process_file<P, F>(path: P, cfg: Config, f: &F) -> Result
 where F: Fn(&str) -> Fmt_Result,
       P: AsRef<Path>,
 {
   let path = path.as_ref();
-  let cfg = gen::Config{checksum_bytes_to_store: 5};
 
   let input = std::fs::read_to_string(path)?;
 
@@ -17,13 +16,13 @@ where F: Fn(&str) -> Fmt_Result,
   Ok(())
 }
 
-pub fn process_files<P, F>(paths: &[P], f: F) -> Result
+pub fn process_files<P, F>(paths: &[P], cfg: Config, f: F) -> Result
 where F: Fn(&str) -> Fmt_Result,
       P: AsRef<Path>,
 {
   for path in paths
   {
-    process_file(path, &f)?;
+    process_file(path, cfg, &f)?;
   }
 
   Ok(())
