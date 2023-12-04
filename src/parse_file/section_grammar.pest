@@ -20,6 +20,6 @@ s = _{ " " }
 any_char = _{ !newline ~ ANY }
 newline = _{ "\n" }
 
-// tets only
+// test only
 line = { code_line | begin_marker_line | end_marker_line }
 code_line = { !marker_line ~ any_char* }
