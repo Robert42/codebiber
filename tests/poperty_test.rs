@@ -1,7 +1,7 @@
 #![allow(non_camel_case_types)]
 
-extern crate codemask;
-use codemask::{
+extern crate rusty_biber;
+use rusty_biber::{
   Indentation, Pretty_Unwrap, Config, generate,
 };
 
