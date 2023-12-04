@@ -6,7 +6,8 @@ pub mod indentation;
 pub mod process;
 pub mod gen;
 
-pub use gen::Fmt_Result;
+pub use indentation::Indentation;
+pub use gen::{generate, Config, Fmt_Result};
 pub use process::{process_file, process_files, Process_Error as Error, Result};
 
 pub mod pretty_unwrap;
@@ -16,9 +17,6 @@ extern crate blake3;
 
 extern crate arrayvec;
 use arrayvec::ArrayVec;
-
-#[cfg(test)]
-extern crate proptest;
 
 extern crate pest;
 #[macro_use]

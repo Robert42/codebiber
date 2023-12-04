@@ -1,9 +1,9 @@
 file = _{ SOI ~ section* ~ EOI}
 
 section = { code | generated }
-generated = { begin_marker_line ~ NEWLINE ~ optional_code ~ end_marker_line ~ NEWLINE? }
+generated = { begin_marker_line ~ newline ~ optional_code ~ end_marker_line ~ newline? }
 optional_code = { code? }
-code = @{ (!marker_line ~ any_char* ~ NEWLINE)+ ~ (!marker_line ~ any_char+)? | !marker_line ~ any_char+ }
+code = @{ (!marker_line ~ any_char* ~ newline)+ ~ (!marker_line ~ any_char+)? | !marker_line ~ any_char+ }
 
 marker_line = { begin_marker_line | end_marker_line }
 begin_marker_line = { indentation ~ before_marker ~ "<<" ~ s* ~ "codegen" ~ s+ ~ identifier ~ s* ~ ">>" ~ after_marker }
@@ -14,11 +14,12 @@ after_marker = { any_char* }
 
 indentation = @{ s* }
 identifier = @{ ("_" | ASCII_ALPHANUMERIC)+ }
-checksum = @{ (ASCII_HEX_DIGIT{2}){1,16} }
+checksum = @{ (ASCII_HEX_DIGIT{2}){1,32} }
 
 s = _{ " " }
-any_char = _{ !NEWLINE ~ ANY }
+any_char = _{ !newline ~ ANY }
+newline = _{ "\n" }
 
-// tets only
+// test only
 line = { code_line | begin_marker_line | end_marker_line }
 code_line = { !marker_line ~ any_char* }

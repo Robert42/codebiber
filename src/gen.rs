@@ -2,7 +2,7 @@ use super::*;
 
 use super::parse_file::{find as parse_sections, Section};
 
-#[derive(Default)]
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub struct Config
 {
   pub checksum_bytes_to_store: u8,
@@ -10,8 +10,8 @@ pub struct Config
 
 pub type Fmt_Result<T=Option<String>> = std::result::Result<T, std::fmt::Error>;
 
-pub fn generate<F>(input: &str, cfg: Config, f: F) -> Result<Option<String>>
-where F: Fn(&str) -> Fmt_Result
+pub fn generate<F>(input: &str, cfg: Config, mut f: F) -> Result<Option<String>>
+where F: FnMut(&str) -> Fmt_Result
 {
   debug_assert!(cfg.is_valid());
 
@@ -102,7 +102,7 @@ impl Config
 {
   pub fn is_valid(&self) -> bool
   {
-    self.checksum_bytes_to_store <= 32
+    self.checksum_bytes_to_store <= blake3::KEY_LEN as u8
   }
 }
 
