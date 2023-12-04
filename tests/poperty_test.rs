@@ -1,6 +1,7 @@
 #![allow(non_camel_case_types)]
 
 use codemask::Indentation;
+use codemask::Pretty_Unwrap;
 
 extern crate proptest;
 use proptest::prelude::*;
@@ -149,7 +150,7 @@ proptest!
         | GENERATED { action: REPLACE_WITH(code), .. } => Some(Some(code.clone())),
     }).collect();
     codes.reverse();
-    let actual = codemask::generate(input.as_str(), cfg, move |_| Ok(codes.pop().unwrap())).unwrap();
+    let actual = codemask::generate(input.as_str(), cfg, move |_| Ok(codes.pop().unwrap())).pretty_unwrap();
 
     assert_eq!(actual, expected);
   }
