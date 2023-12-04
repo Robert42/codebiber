@@ -210,7 +210,7 @@ fn code() -> impl Strategy<Value = String>
 
 fn inline_code() -> impl Strategy<Value = String>
 {
-  "[^\n]*".prop_filter(
+  "([^\n]*[^ \n][^\n]*)?".prop_filter(
     "regular code is not allowed to contain `<< codegen`",
     no_marker)
 }
