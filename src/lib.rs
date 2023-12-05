@@ -4,11 +4,11 @@
 /*!
 
 ```rust
-extern crate rusty_biber;
+extern crate codebiber;
 
-fn main() -> rusty_biber::Result
+fn main() -> codebiber::Result
 {
-  let cfg = rusty_biber::Config{
+  let cfg = codebiber::Config{
     // Anything checksum length other than 0 will catch unintended modifications
     // since the last modification.
     checksum_bytes_to_store: 3,
@@ -57,7 +57,7 @@ fn main() -> rusty_biber::Result
                            void handwritten_line5();\n\
                            ".to_owned();
 
-    let actual_output = rusty_biber::generate(input, cfg, gen_code_lines)?;
+    let actual_output = codebiber::generate(input, cfg, gen_code_lines)?;
 
     assert_eq!(actual_output, Some(expected_output));
   }
@@ -65,7 +65,7 @@ fn main() -> rusty_biber::Result
   Ok(())
 }
 
-fn gen_code_lines(name: &str) -> rusty_biber::Fmt_Result
+fn gen_code_lines(name: &str) -> codebiber::Fmt_Result
 {
   let generated = match name
   {
