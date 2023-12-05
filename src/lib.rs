@@ -17,31 +17,43 @@ fn main() -> rusty_biber::Result
   {
     let input = "void handwritten_line1();\n\
                  void handwritten_line2();\n\
+
                  // << codegen foo >>\n\
                  // << /codegen >>\n\
+
                  void handwritten_line3();\n\
+
                  // << codegen bar >>\n\
                  // << /codegen >>\n\
+
                  void handwritten_line4();\n\
+
                  // << codegen baz >>\n\
                  void generated_line_by_some_other_function();\n\
                  // << /codegen >>\n\
+
                  void handwritten_line5();\n\
                  ";
     let expected_output = "void handwritten_line1();\n\
                            void handwritten_line2();\n\
+
                            // << codegen foo >>\n\
                            void autogen_line_foo();\n\
                            // << /codegen aaa272 >>\n\
+
                            void handwritten_line3();\n\
+
                            // << codegen bar >>\n\
                            void autogen_line_bar1();\n\
                            void autogen_line_bar2();\n\
                            // << /codegen 00a214 >>\n\
+
                            void handwritten_line4();\n\
+
                            // << codegen baz >>\n\
                            void generated_line_by_some_other_function();\n\
                            // << /codegen 810c07 >>\n\
+
                            void handwritten_line5();\n\
                            ".to_owned();
 
