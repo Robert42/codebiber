@@ -84,26 +84,26 @@ They are simply the first few bytes of a blake3 hahsum
 ```rust
 extern crate codebiber;
 
-const INPUT : &str =
- "void handwritten_line1();\n\
-  void handwritten_line2();\n\
+const INPUT : &str = r"
+void handwritten_line1();
+void handwritten_line2();
 
-  // << codegen foo >>\n\
-  // << /codegen >>\n\
+// << codegen foo >>
+// << /codegen >>
 
-  void handwritten_line3();\n\
+void handwritten_line3();
 
-  // << codegen bar >>\n\
-  // << /codegen >>\n\
+// << codegen bar >>
+// << /codegen >>
 
-  void handwritten_line4();\n\
+void handwritten_line4();
 
-  // << codegen baz >>\n\
-  void generated_line_by_some_other_function();\n\
-  // << /codegen >>\n\
+// << codegen baz >>
+void generated_line_by_some_other_function();
+// << /codegen >>
 
-  void handwritten_line5();\n\
-  ";
+void handwritten_line5();
+";
               
 fn main() -> codebiber::Result
 {
@@ -134,29 +134,29 @@ fn gen_code_lines(name: &str) -> codebiber::Fmt_Result
   Ok(generated)
 }
 
-const EXPECTED_OUTPUT : &str =
- "void handwritten_line1();\n\
-  void handwritten_line2();\n\
+const EXPECTED_OUTPUT : &str = r"
+void handwritten_line1();
+void handwritten_line2();
 
-  // << codegen foo >>\n\
-  void autogen_line_foo();\n\
-  // << /codegen aaa272 >>\n\
+// << codegen foo >>
+void autogen_line_foo();
+// << /codegen aaa272 >>
 
-  void handwritten_line3();\n\
+void handwritten_line3();
 
-  // << codegen bar >>\n\
-  void autogen_line_bar1();\n\
-  void autogen_line_bar2();\n\
-  // << /codegen 00a214 >>\n\
+// << codegen bar >>
+void autogen_line_bar1();
+void autogen_line_bar2();
+// << /codegen 00a214 >>
 
-  void handwritten_line4();\n\
+void handwritten_line4();
 
-  // << codegen baz >>\n\
-  void generated_line_by_some_other_function();\n\
-  // << /codegen 810c07 >>\n\
+// << codegen baz >>
+void generated_line_by_some_other_function();
+// << /codegen 810c07 >>
 
-  void handwritten_line5();\n\
-  ";
+void handwritten_line5();
+";
 ```
 
 */
