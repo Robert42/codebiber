@@ -84,6 +84,27 @@ They are simply the first few bytes of a blake3 hahsum
 ```rust
 extern crate codebiber;
 
+const INPUT : &str =
+ "void handwritten_line1();\n\
+  void handwritten_line2();\n\
+
+  // << codegen foo >>\n\
+  // << /codegen >>\n\
+
+  void handwritten_line3();\n\
+
+  // << codegen bar >>\n\
+  // << /codegen >>\n\
+
+  void handwritten_line4();\n\
+
+  // << codegen baz >>\n\
+  void generated_line_by_some_other_function();\n\
+  // << /codegen >>\n\
+
+  void handwritten_line5();\n\
+  ";
+              
 fn main() -> codebiber::Result
 {
   let cfg = codebiber::Config{
@@ -93,51 +114,10 @@ fn main() -> codebiber::Result
   };
 
   {
-    let input = "void handwritten_line1();\n\
-                 void handwritten_line2();\n\
 
-                 // << codegen foo >>\n\
-                 // << /codegen >>\n\
+    let actual_output = codebiber::generate(INPUT, cfg, gen_code_lines)?;
 
-                 void handwritten_line3();\n\
-
-                 // << codegen bar >>\n\
-                 // << /codegen >>\n\
-
-                 void handwritten_line4();\n\
-
-                 // << codegen baz >>\n\
-                 void generated_line_by_some_other_function();\n\
-                 // << /codegen >>\n\
-
-                 void handwritten_line5();\n\
-                 ";
-    let expected_output = "void handwritten_line1();\n\
-                           void handwritten_line2();\n\
-
-                           // << codegen foo >>\n\
-                           void autogen_line_foo();\n\
-                           // << /codegen aaa272 >>\n\
-
-                           void handwritten_line3();\n\
-
-                           // << codegen bar >>\n\
-                           void autogen_line_bar1();\n\
-                           void autogen_line_bar2();\n\
-                           // << /codegen 00a214 >>\n\
-
-                           void handwritten_line4();\n\
-
-                           // << codegen baz >>\n\
-                           void generated_line_by_some_other_function();\n\
-                           // << /codegen 810c07 >>\n\
-
-                           void handwritten_line5();\n\
-                           ".to_owned();
-
-    let actual_output = codebiber::generate(input, cfg, gen_code_lines)?;
-
-    assert_eq!(actual_output, Some(expected_output));
+    assert_eq!(actual_output, Some(EXPECTED_OUTPUT.to_owned()));
   }
 
   Ok(())
@@ -153,6 +133,30 @@ fn gen_code_lines(name: &str) -> codebiber::Fmt_Result
   };
   Ok(generated)
 }
+
+const EXPECTED_OUTPUT : &str =
+ "void handwritten_line1();\n\
+  void handwritten_line2();\n\
+
+  // << codegen foo >>\n\
+  void autogen_line_foo();\n\
+  // << /codegen aaa272 >>\n\
+
+  void handwritten_line3();\n\
+
+  // << codegen bar >>\n\
+  void autogen_line_bar1();\n\
+  void autogen_line_bar2();\n\
+  // << /codegen 00a214 >>\n\
+
+  void handwritten_line4();\n\
+
+  // << codegen baz >>\n\
+  void generated_line_by_some_other_function();\n\
+  // << /codegen 810c07 >>\n\
+
+  void handwritten_line5();\n\
+  ";
 ```
 
 */
