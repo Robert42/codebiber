@@ -113,12 +113,9 @@ fn main() -> codebiber::Result
     checksum_bytes_to_store: 3,
   };
 
-  {
+  let actual_output = codebiber::generate(INPUT, cfg, gen_code_lines)?;
 
-    let actual_output = codebiber::generate(INPUT, cfg, gen_code_lines)?;
-
-    assert_eq!(actual_output, Some(EXPECTED_OUTPUT.to_owned()));
-  }
+  assert_eq!(actual_output, Some(EXPECTED_OUTPUT.to_owned()));
 
   Ok(())
 }
