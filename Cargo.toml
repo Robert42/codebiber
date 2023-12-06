@@ -17,4 +17,4 @@ thiserror = "1.0.50"
 [dev-dependencies]
 proptest = "1.4.0"
 lazy-regex = "3.1.0"
-unwrap_display = "0.0.0"
+unwrap_display = "0.0.1"
