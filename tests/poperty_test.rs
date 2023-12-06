@@ -2,7 +2,7 @@
 
 extern crate codebiber;
 use codebiber::{
-  Indentation, Pretty_Unwrap, Config, generate,
+  Indentation, Config, generate,
 };
 
 extern crate proptest;
@@ -12,6 +12,9 @@ use proptest::prelude::*;
 extern crate lazy_regex;
 
 extern crate blake3;
+
+extern crate unwrap_display;
+use unwrap_display::UnwrapDisplay;
 
 #[derive(Clone, Debug)]
 enum Section
@@ -150,7 +153,7 @@ proptest!
         | GENERATED { action: REPLACE_WITH(code), .. } => Some(Some(code.clone())),
     }).collect();
     codes.reverse();
-    let actual = generate(input.as_str(), cfg, move |_| Ok(codes.pop().unwrap())).pretty_expect_with_code(input.as_str());
+    let actual = generate(input.as_str(), cfg, move |_| Ok(codes.pop().unwrap())).expect_display_code(input.as_str());
 
     assert_eq!(actual, expected, "   input: {:?}", input.as_str());
   }

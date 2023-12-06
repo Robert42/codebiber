@@ -167,9 +167,6 @@ pub use indentation::Indentation;
 pub use gen::{generate, Config, Fmt_Result};
 pub use process::{process_file, process_files, Process_Error as Error, Result};
 
-pub mod pretty_unwrap;
-pub use pretty_unwrap::Pretty_Unwrap;
-
 extern crate blake3;
 
 extern crate arrayvec;
@@ -185,3 +182,8 @@ use smallvec::SmallVec;
 
 #[macro_use]
 extern crate thiserror;
+
+#[cfg(test)]
+extern crate unwrap_display;
+#[cfg(test)]
+use unwrap_display::UnwrapDisplay;
