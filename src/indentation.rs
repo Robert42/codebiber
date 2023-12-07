@@ -48,41 +48,47 @@ mod test
     };
   }
 
+  macro_rules! assert_indent {
+    ($i:expr, $unindented:expr, $indented:expr) => {
+      assert_eq!(indent!($i, $unindented), $indented);
+    };
+  }
+
   #[test]
   fn test_trivial()
   {
-    assert_eq!(indent!(0, ""), "");
-    assert_eq!(indent!(0, "x"), "x\n");
-    assert_eq!(indent!(0, "x\ny"), "x\ny\n");
+    assert_indent!(0, "", "");
+    assert_indent!(0, "x", "x\n");
+    assert_indent!(0, "x\ny", "x\ny\n");
   }
 
   #[test]
   fn test_simpl()
   {
-    assert_eq!(indent!(2, ""), "");
-    assert_eq!(indent!(2, "x"), "  x\n");
-    assert_eq!(indent!(2, "x\ny"), "  x\n  y\n");
-    assert_eq!(indent!(4, "Hello, World!"), "    Hello, World!\n");
+    assert_indent!(2, "", "");
+    assert_indent!(2, "x", "  x\n");
+    assert_indent!(2, "x\ny", "  x\n  y\n");
+    assert_indent!(4, "Hello, World!", "    Hello, World!\n");
   }
 
   #[test]
   fn test_with_lienbreak()
   {
-    assert_eq!(indent!(2, "x\ny\nz"), "  x\n  y\n  z\n");
+    assert_indent!(2, "x\ny\nz", "  x\n  y\n  z\n");
   }
 
   #[test]
   fn test_dont_add_trailing_whitespace()
   {
-    assert_eq!(indent!(2, "x\n\n\ny"), "  x\n\n\n  y\n");
-    assert_eq!(indent!(2, "x\n\ny\n\n\nz"), "  x\n\n  y\n\n\n  z\n");
-    assert_eq!(indent!(2, "x\n"), "  x\n");
+    assert_indent!(2, "x\n\n\ny", "  x\n\n\n  y\n");
+    assert_indent!(2, "x\n\ny\n\n\nz", "  x\n\n  y\n\n\n  z\n");
+    assert_indent!(2, "x\n", "  x\n");
   }
 
   #[test]
   fn test_difficult_cases()
   {
-    assert_eq!(indent!(2, "\nx"), "\n  x\n");
+    assert_indent!(2, "\nx", "\n  x\n");
   }
 }
 
