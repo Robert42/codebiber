@@ -7,6 +7,11 @@ impl Indentation
   {
     indent_lines(text, self.0)
   }
+
+  pub fn unindent_str(self, text: &str) -> Result<String, Unindent_Error>
+  {
+    unindent_lines(text, self.0)
+  }
 }
 
 fn indent_lines(input: &str, indentation: usize) -> String
@@ -27,6 +32,22 @@ fn indent_lines(input: &str, indentation: usize) -> String
   output
 }
 
+fn unindent_lines(input: &str, indentation: usize) -> Result<String, Unindent_Error>
+{
+  let mut output = String::with_capacity(input.len());
+
+  for line in input.lines()
+  {
+    if !line.is_empty()
+    {
+      output.push_str(&line[indentation..]);
+    }
+    output.push('\n');
+  }
+
+  Ok(output)
+}
+
 impl fmt::Display for Indentation
 {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
@@ -39,18 +60,42 @@ impl fmt::Display for Indentation
   }
 }
 
+#[derive(Clone, Debug, Error)]
+pub enum Unindent_Error
+{
+}
+
+pub fn ensure_tailing_linebreak(mut xs: String) -> String
+{
+  if !xs.is_empty() && !xs.ends_with('\n')
+  {
+    xs.push('\n');
+  }
+
+  xs
+}
+
 #[cfg(test)]
 mod test
 {
+  use crate::UnwrapDisplay;
+
   macro_rules! indent {
     ($i:expr, $str:expr) => {
       crate::indentation::Indentation($i).indent_str($str).as_str()
     };
   }
 
+  macro_rules! unindent {
+    ($i:expr, $str:expr) => {
+      crate::indentation::Indentation($i).unindent_str($str).unwrap_display().as_str()
+    };
+  }
+
   macro_rules! assert_indent {
     ($i:expr, $unindented:expr, $indented:expr) => {
       assert_eq!(indent!($i, $unindented), $indented);
+      assert_eq!(unindent!($i, $indented), crate::indentation::ensure_tailing_linebreak($unindented.to_owned()));
     };
   }
 
