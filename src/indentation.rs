@@ -38,10 +38,10 @@ fn unindent_lines(input: &str, indentation: usize) -> Result<String, Unindent_Er
 
   for line in input.lines()
   {
-    if !line.is_empty()
-    {
-      output.push_str(&line[indentation..]);
-    }
+    let keep_after = line.len().min(indentation);
+    if !line.as_bytes()[..keep_after].iter().all(|&x| x==b' ')
+    { return Err(Unindent_Error::NON_WS_IN_INDENTATION) }
+    output.push_str(&line[keep_after..]);
     output.push('\n');
   }
 
@@ -60,9 +60,11 @@ impl fmt::Display for Indentation
   }
 }
 
-#[derive(Clone, Debug, Error)]
+#[derive(Clone, Debug, PartialEq, Eq, Error)]
 pub enum Unindent_Error
 {
+  #[error("Non whitespace character in indentation")]
+  NON_WS_IN_INDENTATION,
 }
 
 pub fn ensure_tailing_linebreak(mut xs: String) -> String
@@ -78,8 +80,6 @@ pub fn ensure_tailing_linebreak(mut xs: String) -> String
 #[cfg(test)]
 mod test
 {
-  use crate::UnwrapDisplay;
-
   macro_rules! indent {
     ($i:expr, $str:expr) => {
       crate::indentation::Indentation($i).indent_str($str).as_str()
@@ -88,7 +88,7 @@ mod test
 
   macro_rules! unindent {
     ($i:expr, $str:expr) => {
-      crate::indentation::Indentation($i).unindent_str($str).unwrap_display().as_str()
+      crate::indentation::Indentation($i).unindent_str($str).unwrap().as_str()
     };
   }
 
@@ -134,6 +134,13 @@ mod test
   fn test_difficult_cases()
   {
     assert_indent!(2, "\nx", "\n  x\n");
+  }
+
+  #[test]
+  fn test_unindent_invalid_indentation()
+  {
+    assert_eq!(crate::indentation::Indentation(2).unindent_str("xyz"), Err(crate::indentation::Unindent_Error::NON_WS_IN_INDENTATION));
+    assert_eq!(crate::indentation::Indentation(2).unindent_str(" \n").unwrap(), "\n");
   }
 }
 
