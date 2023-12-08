@@ -45,7 +45,7 @@ void generated_line_by_some_other_function();
 // << /codegen >>
 ```
 
-The function [`generate`]! accepts the input code, a [configuration](Config) and
+The function [`generate`] accepts the input code, a [configuration](Config) and
 most important the function which will generate the code.
 
 In our example, the function will be called once for each section.
