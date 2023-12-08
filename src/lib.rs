@@ -93,8 +93,8 @@ void handwritten_line2();
 
 void handwritten_line3();
 
-// << codegen bar >>
-// << /codegen >>
+  // << codegen bar >>
+  // << /codegen >>
 
 void handwritten_line4();
 
@@ -141,10 +141,10 @@ void autogen_line_foo();
 
 void handwritten_line3();
 
-// << codegen bar >>
-void autogen_line_bar1();
-void autogen_line_bar2();
-// << /codegen 00a214 >>
+  // << codegen bar >>
+  void autogen_line_bar1();
+  void autogen_line_bar2();
+  // << /codegen 00a214 >>
 
 void handwritten_line4();
 
@@ -155,6 +155,10 @@ void generated_line_by_some_other_function();
 void handwritten_line5();
 ";
 ```
+
+Please not how the generated code in the `bar` section is indented.
+That's because the generated code inherits the indentation of the marker line
+`// << codegen bar >>`
 
 */
 
