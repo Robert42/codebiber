@@ -1,6 +1,7 @@
 use super::*;
 
 use super::parse_file::{find as parse_sections, Section};
+use indentation::ensure_tailing_linebreak;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub struct Config
@@ -34,7 +35,8 @@ where F: FnMut(&str) -> Fmt_Result
       HANDWRITTEN(code) => generated += code,
       CODEGEN { identifier, code: old_code, checksum: old_checksum, begin, end } =>
       {
-        check_code_checksum(old_code, old_checksum)?;
+        let old_code = begin.indentation.unindent_str(old_code)?;
+        check_code_checksum(&old_code, old_checksum)?;
         let old_checksum =
         {
           let actual_checksum = blake3::hash(old_code.as_bytes());
@@ -44,18 +46,9 @@ where F: FnMut(&str) -> Fmt_Result
 
         write!(&mut generated, "{i}{before}<< codegen {ident} >>{after}\n", i=begin.indentation, before=begin.before_marker, after=begin.after_marker, ident=identifier)?;
         
-        let _tmp_buffer;
-        let new_code = match f(identifier)?
-        {
-          Some(generated_code) => 
-          {
-            _tmp_buffer = begin.indentation.indent_str(generated_code.as_str());
-            _tmp_buffer.as_str()
-          }
-          None => old_code
-        };
+        let new_code = f(identifier)?.map(ensure_tailing_linebreak).unwrap_or(old_code);
         let new_checksum = blake3::hash(new_code.as_bytes());
-        generated += new_code;
+        generated += begin.indentation.indent_str(new_code.as_str()).as_str();
 
         write!(&mut generated, "{i}{before}<< /codegen ", i=begin.indentation, before=end.before_marker)?;
         if cfg.checksum_bytes_to_store > 0
@@ -96,6 +89,8 @@ pub enum Gen_Error
   WRONG_CHECKSUM(blake3::Hash),
   #[error("The code generating function modified code outside the code section")]
   FORBIDDEN,
+  #[error("The old code has a smaller indentation than the marker")]
+  UNINDENT_ERROR(#[from] crate::indentation::Unindent_Error),
 }
 
 impl Config
@@ -218,6 +213,25 @@ mod test
   }
   
   #[test]
+  fn test_hash_and_indentation()
+  {
+    fn gen(n: &str) -> Fmt_Result
+    {
+      let x = match n
+      {
+        "x" => "42\n  137\n1337",
+        n => todo!("{n}"),
+      };
+      Ok(Some(x.into()))
+    }
+
+    const CKSM_4 : Config = Config{checksum_bytes_to_store: 2, .. CFG};
+
+    assert_eq!(generate("<< codegen x >>\n<< /codegen >>", CKSM_4, gen).unwrap_display(), Some("<< codegen x >>\n42\n  137\n1337\n<< /codegen 2d1c >>\n".to_owned()));
+    assert_eq!(generate("  << codegen x >>\n<< /codegen >>", CKSM_4, gen).unwrap_display(), Some("  << codegen x >>\n  42\n    137\n  1337\n  << /codegen 2d1c >>\n".to_owned()));
+  }
+  
+  #[test]
   fn allow_skipping_sections()
   {
     fn ignore(_n: &str) -> Fmt_Result
@@ -226,7 +240,7 @@ mod test
     }
 
     assert_eq!(generate("<< codegen x >>\nxyuz\nuv\n<< /codegen >>", CFG, ignore).unwrap_display(), None);
-    assert_eq!(generate("  << codegen x >>\nxyuz\n  <>\n    []\nuv\n<< /codegen >>", CFG, ignore).unwrap_display(), None);
+    assert_eq!(generate("  << codegen x >>\n  xyuz\n  <>\n    []\n  uv\n<< /codegen >>", CFG, ignore).unwrap_display(), None);
   }
 }
 

@@ -1,4 +1,5 @@
 #![allow(non_camel_case_types)]
+#![feature(string_remove_matches)]
 
 extern crate codebiber;
 use codebiber::{
@@ -78,12 +79,14 @@ fn format_expected_output(sections: &[Section], cfg: Config) -> Option<String>
 
 fn format_generated_code(out: &mut String, code: &str, name: &str, surround: &Surround, config: Config) -> std::fmt::Result
 {
-  let code = surround.indent.indent_str(code);
+  let mut code = code.to_owned();
+  ensure_newline(&mut code);
+  let hash = blake3::hash(code.as_bytes()).to_hex();
+  let code = surround.indent.indent_str(code.as_str());
 
   use std::fmt::Write;
   surround.begin(out, Some(name))?;
   write!(out, "{code}")?;
-  let hash = blake3::hash(code.as_bytes()).to_hex();
   let suffix = match config.checksum_bytes_to_store
   {
     0 => None,
@@ -203,7 +206,7 @@ fn surround_marker() -> impl Strategy<Value = Surround_Marker>
 
 fn code() -> impl Strategy<Value = String>
 {
-  "(\n)?(.*\n)*.*(\n)?".prop_filter(
+  "(\n)?(.*\n)*.*(\n)?".prop_map(remove_carriage_return).prop_filter(
     "regular code is not allowed to contain `<< codegen`",
     no_marker)
 }
@@ -243,6 +246,12 @@ fn set_tailing_linebreak(mut code: String, expect_tailing_linebreak: bool) -> St
     (true, false) => code.push('\n'),
   }
 
+  code
+}
+
+fn remove_carriage_return(mut code: String) -> String
+{
+  code.remove_matches('\r');
   code
 }
 
