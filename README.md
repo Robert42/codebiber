@@ -8,5 +8,5 @@ It is heavily inspired by Ned Batchelder's [cog](https://web.archive.org/web/202
 
 This work is provided on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND.
 
-It is experimental and has an experimental API, behavior and implementation.
+It is an experimental library and has an experimental API, behavior and implementation and no longterm plans.
 Use at own risk.
