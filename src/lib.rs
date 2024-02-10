@@ -1,4 +1,3 @@
-#![feature(slice_as_chunks)]
 #![allow(non_camel_case_types)]
 
 /*!

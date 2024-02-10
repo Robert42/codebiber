@@ -58,8 +58,9 @@ fn parse_checksum(checksum: &str) -> ArrayVec<u8, 32>
   debug_assert_eq!(checksum.len()%2, 0, "I expect the parser to guarantee that");
 
   let mut xs = ArrayVec::<u8, 32>::new();
-  let (checksum_bytes, _) = checksum.as_bytes().as_chunks::<2>();
-  for &digit_pair in checksum_bytes
+
+  let checksum_bytes = checksum.as_bytes();
+  for digit_pair in (0..checksum_bytes.len()/2).map(|i| [checksum_bytes[i*2], checksum_bytes[i*2+1]])
   {
     xs.push(u8_from_hex(digit_pair));
   }
