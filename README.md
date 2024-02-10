@@ -10,3 +10,10 @@ This work is provided on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF A
 
 It is an experimental library and has an experimental API, behavior and implementation and no longterm plans.
 Use at own risk.
+
+## Changelog
+
+### v0.0.1
+
+- Minumum supported rust version is now 1.63 (for regular builds, not dev builds) 05ed194ddaa2127b671c0345cfdf8e4330419242
+- Not using unstable features anymore 0341b2d033173a4f7d6e084ae14bd36f623db9d5
