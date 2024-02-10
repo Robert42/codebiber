@@ -171,6 +171,8 @@ mod test
     assert_eq!(u8_from_hex([b'4', b'2']), 0x42);
 
     assert_eq!(parse_checksum("").as_slice(), &[]);
+    assert_eq!(parse_checksum("42").as_slice(), &[0x42]);
+    assert_eq!(parse_checksum("0123456789abcdef").as_slice(), &[0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef]);
 
     let checksum = blake3::hash(b"42");
     assert_eq!(parse_checksum(checksum.to_string().as_str()).as_slice(), checksum.as_bytes());
