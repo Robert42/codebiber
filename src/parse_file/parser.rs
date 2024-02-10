@@ -58,8 +58,9 @@ fn parse_checksum(checksum: &str) -> ArrayVec<u8, 32>
   debug_assert_eq!(checksum.len()%2, 0, "I expect the parser to guarantee that");
 
   let mut xs = ArrayVec::<u8, 32>::new();
-  let (checksum_bytes, _) = checksum.as_bytes().as_chunks::<2>();
-  for &digit_pair in checksum_bytes
+
+  let checksum_bytes = checksum.as_bytes();
+  for digit_pair in (0..checksum_bytes.len()/2).map(|i| [checksum_bytes[i*2], checksum_bytes[i*2+1]])
   {
     xs.push(u8_from_hex(digit_pair));
   }
@@ -171,6 +172,8 @@ mod test
     assert_eq!(u8_from_hex([b'4', b'2']), 0x42);
 
     assert_eq!(parse_checksum("").as_slice(), &[]);
+    assert_eq!(parse_checksum("42").as_slice(), &[0x42]);
+    assert_eq!(parse_checksum("0123456789abcdef").as_slice(), &[0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef]);
 
     let checksum = blake3::hash(b"42");
     assert_eq!(parse_checksum(checksum.to_string().as_str()).as_slice(), checksum.as_bytes());
