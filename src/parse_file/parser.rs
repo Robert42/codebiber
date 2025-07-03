@@ -15,6 +15,10 @@ pub enum Syntax_Error
   CHECKSUM_TOO_LONG,
   #[error("Odd number of hex digits do not encode bytes")]
   CHECKSUM_NOT_EVEN,
+  #[error("Nested code generatoin blocks are not supported")]
+  NESTED_CODEGEN_NOT_SUPPORTED,
+  #[error("`<< /codegen` without matching `<< codegen`")]
+  CODEGEN_END_WITHOUT_MATCHING_BEGIN,
 }
 
 pub fn parse<'a>(full_code: &'a str) -> Result<Section_List<'a>>
@@ -55,17 +59,15 @@ impl<'a> State_Machine<'a>
     {
     (NOTHING, Line::CODE(span)) => HANDWRITTEN(span),
     (NOTHING, Line::BEGIN_CODEGEN{marker, identifier}) => CODEGEN{marker, identifier, code: None},
-    (NOTHING, Line::END_CODEGEN{..}) => todo!("error!"),
     (HANDWRITTEN(so_far), Line::CODE(span)) => HANDWRITTEN(slice_join(so_far, span)),
     (HANDWRITTEN(so_far), Line::BEGIN_CODEGEN{marker, identifier}) =>
     {
       sections.push(Section::HANDWRITTEN(slice_join(so_far, &line_span[..0])));
       CODEGEN{marker, identifier, code: None}
     }
-    (HANDWRITTEN(..), Line::END_CODEGEN{..}) => todo!("error!"),
     (CODEGEN{marker, identifier, code: None}, Line::CODE(span)) => CODEGEN{marker, identifier, code: Some(span)},
     (CODEGEN{marker, identifier, code: Some(code)}, Line::CODE(span)) => CODEGEN{marker, identifier, code: Some(slice_join(code, span))},
-    (CODEGEN{..}, Line::BEGIN_CODEGEN{..}) => todo!("error!"),
+    (CODEGEN{..}, Line::BEGIN_CODEGEN{..}) => Err(Syntax_Error::NESTED_CODEGEN_NOT_SUPPORTED)?,
     (CODEGEN{marker: begin, identifier, code}, Line::END_CODEGEN{marker: end, checksum}) =>
     {
       let checksum = parse_checksum(checksum)?;
@@ -74,6 +76,7 @@ impl<'a> State_Machine<'a>
       sections.push(Section::CODEGEN{identifier, code, checksum, begin, end});
       NOTHING
     }
+    (_, Line::END_CODEGEN{..}) => Err(Syntax_Error::CODEGEN_END_WITHOUT_MATCHING_BEGIN)?,
     };
 
     Ok(())
