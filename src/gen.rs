@@ -166,7 +166,7 @@ mod test
         "42" => "42",
         "newline" => "\n",
         "42_newline" => "42\n",
-        n => todo!("{n}"),
+        n => unimplemented!("{n}"),
       };
       Ok(Some(x.to_owned()))
     }
@@ -203,7 +203,7 @@ mod test
       let x = match n
       {
         "x" => "42\n137\n1337",
-        n => todo!("{n}"),
+        n => unimplemented!("{n}"),
       };
       Ok(Some(x.into()))
     }
@@ -220,7 +220,7 @@ mod test
       let x = match n
       {
         "x" => "42\n  137\n1337",
-        n => todo!("{n}"),
+        n => unimplemented!("{n}"),
       };
       Ok(Some(x.into()))
     }
