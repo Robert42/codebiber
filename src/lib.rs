@@ -246,10 +246,6 @@ pub use process::{process_file, process_files, Process_Error as Error, Result};
 
 extern crate blake3;
 
-extern crate pest;
-#[macro_use]
-extern crate pest_derive;
-
 #[macro_use]
 extern crate thiserror;
 

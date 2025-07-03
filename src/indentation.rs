@@ -12,6 +12,13 @@ impl Indentation
   {
     unindent_lines(text, self.0)
   }
+
+  pub fn parse(code: &mut &str) -> Self
+  {
+    let index = code.find(|x| x!=' ').unwrap_or(code.len());
+    *code = &(*code)[index..];
+    return Self(index);
+  }
 }
 
 fn indent_lines(input: &str, indentation: usize) -> String
@@ -141,6 +148,21 @@ mod test
   {
     assert_eq!(crate::indentation::Indentation(2).unindent_str("xyz"), Err(crate::indentation::Unindent_Error::NON_WS_IN_INDENTATION));
     assert_eq!(crate::indentation::Indentation(2).unindent_str(" \n").unwrap(), "\n");
+  }
+
+  #[test]
+  fn test_parse_indent()
+  {
+    fn parse(mut code: &str) -> (usize, &str)
+    {
+      use crate::indentation::Indentation;
+      let Indentation(i) = Indentation::parse(&mut code);
+      return (i, code);
+    }
+
+    assert_eq!(parse(""), (0, ""));
+    assert_eq!(parse(" "), (1, ""));
+    assert_eq!(parse("   x"), (3, "x"));
   }
 }
 

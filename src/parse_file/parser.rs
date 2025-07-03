@@ -2,54 +2,111 @@ use super::*;
 
 mod line;
 
-#[derive(Parser)]
-#[grammar = "parse_file/section_grammar.pest"]
-pub struct Section_Parser
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
+pub enum Syntax_Error
 {
+  #[error("Expected identifier")]
+  EXPECTED_IDENTIFIER,
+  #[error("Expected {0:?}")]
+  EXPECTED_SNIPPET(&'static str),
+  #[error("Unexpected end")]
+  UNEXPECTED_END,
 }
 
-pub type Syntax_Error = crate::pest::error::Error<Rule>;
-
-pub fn parse(code: &str) -> Result<Section_List>
+pub fn parse<'a>(full_code: &'a str) -> Result<Section_List<'a>>
 {
   let mut sections = Vec::with_capacity(16);
+  let mut state_machine = State_Machine::default();
 
-  let result = Section_Parser::parse(Rule::file, code)?;
-  for r in result
+  for line in full_code.lines()
   {
-    match r.as_rule()
-    {
-      Rule::section => sections.push(parse_section(r)?),
-      Rule::EOI => (),
-      _ => unimplemented!("{:?}", r.as_rule()),
-    }
+    state_machine.consume_line(full_code, &mut sections, line)?;
   }
+
+  state_machine.end(full_code, &mut sections)?;
 
   Ok(sections)
 }
 
-fn parse_section(node: crate::pest::iterators::Pair<Rule>) -> Result<Section>
+#[derive(Clone, Copy, Default)]
+pub enum State_Machine<'a>
 {
-  debug_assert_eq!(node.as_rule(), Rule::section);
-  
-  let node = node.into_inner().next().unwrap();
-  let s = match node.as_rule()
+  #[default]
+  NOTHING,
+  HANDWRITTEN(&'a str),
+  CODEGEN{marker: Marker<'a>, identifier: &'a str, code: Option<&'a str>},
+}
+
+impl<'a> State_Machine<'a>
+{
+  fn consume_line(&mut self, full_code: &'a str, sections: &mut Vec<Section<'a>>, line_span: &'a str) -> Result<()>
   {
-    Rule::code => Section::HANDWRITTEN(node.as_str()),
-    Rule::generated => {
-      let mut xs = node.into_inner();
-      let (begin, identifier) = line::parse_begin_marker(xs.next().unwrap());
-      let code = xs.next().unwrap().as_str();
-      let (end, checksum) = line::parse_end_marker(xs.next().unwrap());
+    use self::line::Line;
+    use State_Machine::*;
+    let line = self::line::parse(line_span)?;
+
+    let slice_join = |a, b| self::slice_join(full_code, a, b);
     
-      let checksum = parse_checksum(checksum);
-
-      Section::CODEGEN { identifier, code, checksum, begin, end }
+    *self = match (*self, line)
+    {
+    (NOTHING, Line::CODE(span)) => HANDWRITTEN(span),
+    (NOTHING, Line::BEGIN_CODEGEN{marker, identifier}) => CODEGEN{marker, identifier, code: None},
+    (NOTHING, Line::END_CODEGEN{..}) => todo!("error!"),
+    (HANDWRITTEN(so_far), Line::CODE(span)) => HANDWRITTEN(slice_join(so_far, span)),
+    (HANDWRITTEN(so_far), Line::BEGIN_CODEGEN{marker, identifier}) =>
+    {
+      sections.push(Section::HANDWRITTEN(slice_join(so_far, &line_span[..0])));
+      CODEGEN{marker, identifier, code: None}
     }
-    _ => unreachable!(),
-  };
+    (HANDWRITTEN(..), Line::END_CODEGEN{..}) => todo!("error!"),
+    (CODEGEN{marker, identifier, code: None}, Line::CODE(span)) => CODEGEN{marker, identifier, code: Some(span)},
+    (CODEGEN{marker, identifier, code: Some(code)}, Line::CODE(span)) => CODEGEN{marker, identifier, code: Some(slice_join(code, span))},
+    (CODEGEN{..}, Line::BEGIN_CODEGEN{..}) => todo!("error!"),
+    (CODEGEN{marker: begin, identifier, code}, Line::END_CODEGEN{marker: end, checksum}) =>
+    {
+      let checksum = parse_checksum(checksum);
+      let code = code.unwrap_or(&line_span[..0]);
+      let code = slice_join(code, &line_span[..0]);
+      sections.push(Section::CODEGEN{identifier, code, checksum, begin, end});
+      NOTHING
+    }
+    };
 
-  Ok(s)
+    Ok(())
+  }
+
+  fn end(self, full_code: &'a str, sections: &mut Vec<Section<'a>>) -> Result<()>
+  {
+    use State_Machine::*;
+    match self
+    {
+    NOTHING => (),
+    HANDWRITTEN(code) => sections.push(Section::HANDWRITTEN(slice_join(full_code, code, end_slice(full_code)))),
+    CODEGEN{..} => todo!("error"),
+    }
+
+    Ok(())
+  }
+}
+
+fn end_slice<'a>(slice: &'a str) -> &'a str
+{
+  return &slice[slice.len()..];
+}
+
+fn slice_join<'a>(full_slice: &'a str, a: &'a str, b: &'a str) -> &'a str
+{
+  let len = full_slice.len();
+  let origin = full_slice.as_ptr();
+  let begin = a.as_ptr();
+  let end = b[b.len()..].as_ptr();
+
+  let begin = begin as usize - origin as usize;
+  let end = end as usize - origin as usize;
+
+  assert!(begin <= end);
+  assert!(end <= len);
+  return &full_slice[begin .. end];
 }
 
 fn parse_checksum(checksum: &str) -> Vec<u8>
@@ -93,21 +150,14 @@ mod test
   #[test]
   fn test_parse_section() -> Result
   {
-    assert!(parse_section("").is_err());
-    assert_eq!(parse_section("xyz")?, HANDWRITTEN("xyz"));
-    assert_eq!(parse_section("x\ny\nz")?, HANDWRITTEN("x\ny\nz"));
-    assert_eq!(parse_section("x\ny\n")?, HANDWRITTEN("x\ny\n"));
+    assert_eq!(parse("").unwrap(), vec![]);
+    assert_eq!(parse("xyz").unwrap(), vec![HANDWRITTEN("xyz")]);
+    assert_eq!(parse("x\ny\nz").unwrap(), vec![HANDWRITTEN("x\ny\nz")]);
+    assert_eq!(parse("x\ny\n").unwrap(), vec![HANDWRITTEN("x\ny\n")]);
 
     Ok(())
   }
 
-  fn parse_section(code: &str) -> Result<Section>
-  {
-    let mut result = Section_Parser::parse(Rule::section, code)?;
-  
-    super::parse_section(result.next().unwrap())
-  }
-  
   #[test]
   fn trivial()
   {
@@ -182,5 +232,4 @@ mod test
   use Indentation as I;
 }
 
-use crate::pest::Parser;
 use crate::indentation::Indentation;

@@ -11,8 +11,6 @@ keywords = ["codegen"]
 
 [dependencies]
 blake3 = "=1.4.0"
-pest = "2.7.5"
-pest_derive = "2.7.5"
 thiserror = "1.0.50"
 
 [dev-dependencies]

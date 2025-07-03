@@ -214,6 +214,7 @@ fn code() -> impl Strategy<Value = String>
 fn before_marker() -> impl Strategy<Value = String>
 {
   "([^ \n]+[^\n]*)?"
+  .prop_map(remove_carriage_return)
   .prop_filter("regular code is not allowed to contain `<< codegen`",
     |code| no_marker(code) && !code.ends_with('<') && !code.contains("<<"))
   .prop_filter("surround_marker() /* before */",
@@ -222,7 +223,9 @@ fn before_marker() -> impl Strategy<Value = String>
 
 fn after_marker() -> impl Strategy<Value = String>
 {
-  "([^\n]*[^ \n][^\n]*)?".prop_filter(
+  "([^\n]*[^ \n][^\n]*)?"
+  .prop_map(remove_carriage_return)
+  .prop_filter(
     "regular code is not allowed to contain `<< codegen`",
     no_marker)
 }

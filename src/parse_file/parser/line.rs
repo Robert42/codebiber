@@ -1,6 +1,5 @@
 use super::*;
 
-#[cfg(test)]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Line<'a>
 {
@@ -9,84 +8,139 @@ pub enum Line<'a>
   END_CODEGEN{marker: Marker<'a>, checksum: &'a str,},
 }
 
-#[cfg(test)]
-pub fn parse(node: crate::pest::iterators::Pair<Rule>) -> Result<Line>
-{
-  use Line::*;
-  use Rule::{code_line, begin_marker_line, end_marker_line};
+pub type Result<T=(), E=Syntax_Error> = std::result::Result<T, E>;
 
-  let l = match node.as_rule()
+pub fn parse<'a>(line: &'a str) -> Result<Line<'a>>
+{
+  const BEGIN : &'static str = "<< codegen ";
+  const END : &'static str = "<< /codegen";
+  const TAG_END : &'static str = ">>";
+
+  debug_assert_eq!(line.contains('\n'), false);
+
+  if let Some(index) = line.find(BEGIN)
   {
-    code_line => CODE(node.as_str()),
-    begin_marker_line =>
-    {
-      let (marker, identifier) = parse_marker(node);
-      Line::BEGIN_CODEGEN{marker, identifier}
-    }
-    end_marker_line =>
-    {
-      let (marker, checksum) = parse_marker(node);
-      Line::END_CODEGEN{marker, checksum}
-    }
-    _ => unimplemented!("{:?}", node.as_rule()),
-  };
+    let mut code = &line[..index];
+    let indentation = Indentation::parse(&mut code);
+    let before_marker = code;
 
-  return Ok(l);
-}
+    code = &line[index+BEGIN.len() .. ];
+    let identifier = parse_identifier(&mut code)?;
+    skip_while(&mut code, |x| x==' ');
+    expect(&mut code, TAG_END)?;
+    let after_marker = code;
 
-pub fn parse_begin_marker(node: crate::pest::iterators::Pair<Rule>) -> (Marker, &str)
-{
-  debug_assert!(node.as_rule() == Rule::begin_marker_line);
-  return parse_marker(node);
-}
-
-pub fn parse_end_marker(node: crate::pest::iterators::Pair<Rule>) -> (Marker, &str)
-{
-  debug_assert!(node.as_rule() == Rule::end_marker_line);
-  return parse_marker(node);
-}
-
-fn parse_marker(node: crate::pest::iterators::Pair<Rule>) -> (Marker, &str)
-{
-  debug_assert!(node.as_rule() == Rule::begin_marker_line || node.as_rule() == Rule::end_marker_line);
-  let mut xs = node.into_inner();
-
-  let indentation = xs.next().unwrap();
-  let before_marker = xs.next().unwrap();
-
-  debug_assert_eq!(indentation.as_rule(), Rule::indentation);
-  let indentation = Indentation(indentation.as_str().len());
-
-  debug_assert_eq!(before_marker.as_rule(), Rule::before_marker);
-  let before_marker = before_marker.as_str();
-  
-  let identifier = xs.next().unwrap();
-  let (identifier, after_marker) = match identifier.as_rule()
+    let marker = Marker{indentation, before_marker, after_marker};
+    return Ok(Line::BEGIN_CODEGEN{marker, identifier});
+  }else if let Some(index) = line.find(END)
   {
-    Rule::identifier | Rule::checksum =>
+    let mut code = &line[..index];
+    let indentation = Indentation::parse(&mut code);
+    let before_marker = code;
+
+    code = &line[index+END.len() .. ];
+    skip_while(&mut code, |x| x==' ');
+    let checksum = eat_while(&mut code, |x| char::is_ascii_hexdigit(&x));
+    if checksum.len()%2 != 0
     {
-      let after_marker = xs.next().unwrap();
-      debug_assert_eq!(after_marker.as_rule(), Rule::after_marker);
-      let after_marker = after_marker.as_str();
-
-      (identifier.as_str(), after_marker)
+      todo!();
     }
-    Rule::after_marker => ("", identifier.as_str()),
-    _ => unreachable!("Rule::{:?} span: {:?}", identifier.as_rule(), identifier.as_str()),
-  };
+    skip_while(&mut code, |x| x==' ');
+    expect(&mut code, TAG_END)?;
+    let after_marker = code;
 
-  (Marker{indentation, before_marker, after_marker}, identifier)
+    let marker = Marker{indentation, before_marker, after_marker};
+    return Ok(Line::END_CODEGEN{marker, checksum});
+  }else
+  {
+    return Ok(Line::CODE(line));
+  }
+
+}
+
+fn parse_identifier<'a>(code: &mut &'a str) -> Result<&'a str>
+{
+  if !code.starts_with(is_identifier_char)
+  {
+    return Err(Syntax_Error::EXPECTED_IDENTIFIER)
+  }
+  let index = code.find(|x| !is_identifier_char(x)).unwrap_or(code.len());
+  let ident = &(*code)[..index];
+  let rest = &(*code)[index..];
+  *code = rest;
+  return Ok(ident);
+}
+
+fn expect(code: &mut &str, snippet: &'static str) -> Result<>
+{
+  if !code.starts_with(snippet)
+  {
+    return Err(Syntax_Error::EXPECTED_SNIPPET(snippet))
+  }
+  skip(code, snippet.len());
+  return Ok(())
+}
+
+fn skip(code: &mut &str, len: usize)
+{
+  let _ = eat(code, len);
+}
+
+fn eat<'a>(code: &mut &'a str, len: usize) -> &'a str
+{
+  assert!(code.len() >= len);
+  let x = &code[.. len];
+  *code = &code[len..];
+  return x;
+}
+
+fn skip_while<P: Fn(char)->bool>(code: &mut &str, pred: P)
+{
+  let _ = eat_while(code, pred);
+}
+
+fn eat_while<'a, P: Fn(char)->bool>(code: &mut &'a str, pred: P) -> &'a str
+{
+  let len = code.find(|x| !pred(x)).unwrap_or(code.len());
+  return eat(code, len);
+}
+
+fn is_identifier_char(x: char) -> bool
+{
+  match x
+  {
+  '_'
+  | '0' ..= '9'
+  | 'a' ..= 'z'
+  | 'A' ..= 'Z'
+  => true,
+  _ => false,
+  }
 }
 
 #[cfg(test)]
 mod test
 {
   use super::*;
+  #[test]
+  fn identifier()
+  {
+    fn parse(mut code: &str) -> Result<(&str, &str), Syntax_Error>
+    {
+      let ident = parse_identifier(&mut code)?;
+      return Ok((ident, code));
+    }
+
+    assert_eq!(parse(""), Err(Syntax_Error::EXPECTED_IDENTIFIER));
+    assert_eq!(parse(" "), Err(Syntax_Error::EXPECTED_IDENTIFIER));
+    assert_eq!(parse("x"), Ok(("x", "")));
+    assert_eq!(parse("x, y"), Ok(("x", ", y")));
+  }
 
   #[test]
   fn lines() -> Result
   {
-    let indentation = I(2);
+    let indentation = Indentation(2);
 
     assert_eq!(parse_line("")?, Line::CODE(""));
     assert_eq!(parse_line("xyz")?, Line::CODE("xyz"));
@@ -99,13 +153,8 @@ mod test
     Ok(())
   }
 
-
-  fn parse_line(code: &str) -> Result<Line>
+  fn parse_line<'a>(code: &'a str) -> Result<Line<'a>>
   {
-    let mut result = Section_Parser::parse(Rule::line, code)?;
-
-    super::parse(result.next().unwrap().into_inner().next().unwrap())
+    return super::parse(code);
   }
-
-  use Indentation as I;
 }
