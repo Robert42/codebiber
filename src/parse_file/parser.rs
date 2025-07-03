@@ -52,12 +52,12 @@ fn parse_section(node: crate::pest::iterators::Pair<Rule>) -> Result<Section>
   Ok(s)
 }
 
-fn parse_checksum(checksum: &str) -> ArrayVec<u8, 32>
+fn parse_checksum(checksum: &str) -> Vec<u8>
 {
   debug_assert!(checksum.len() <= 64, "I expect the parser to guarantee 32 less hex digits!\n{checksum:?}");
   debug_assert_eq!(checksum.len()%2, 0, "I expect the parser to guarantee that");
 
-  let mut xs = ArrayVec::<u8, 32>::new();
+  let mut xs = Vec::<u8>::with_capacity(32);
 
   let checksum_bytes = checksum.as_bytes();
   for digit_pair in (0..checksum_bytes.len()/2).map(|i| [checksum_bytes[i*2], checksum_bytes[i*2+1]])
@@ -118,7 +118,7 @@ mod test
       CODEGEN{
         identifier: "foo",
         code: "",
-        checksum: ArrayVec::new(),
+        checksum: Vec::new(),
         begin: Marker{
           indentation: I(0),
           before_marker: "// ",
@@ -144,7 +144,7 @@ mod test
         CODEGEN{
           identifier: "blub",
           code: "  uvw\n",
-          checksum: ArrayVec::new(),
+          checksum: Vec::new(),
           begin: Marker{
             indentation: I(2),
             before_marker: "// ",

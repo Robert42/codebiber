@@ -65,7 +65,7 @@ where F: FnMut(&str) -> Fmt_Result
   return if changed {Ok(Some(generated))} else {Ok(None)};
 }
 
-fn check_code_checksum(code: &str, loaded_checksam: &ArrayVec<u8, 32>) -> Result<blake3::Hash>
+fn check_code_checksum(code: &str, loaded_checksam: &Vec<u8>) -> Result<blake3::Hash>
 {
   let actual_hashsum = blake3::hash(code.as_bytes());
   if &actual_hashsum.as_bytes()[..loaded_checksam.len()] != loaded_checksam.as_slice()
@@ -143,7 +143,7 @@ mod test
   #[test]
   fn test_check_checksum()
   {
-    assert_eq!(check_code_checksum("42", &ArrayVec::new()), Ok(blake3::hash(b"42")));
+    assert_eq!(check_code_checksum("42", &vec![]), Ok(blake3::hash(b"42")));
     assert_eq!(check_code_checksum("42", &blake3::hash(b"42").as_bytes().iter().copied().collect()), Ok(blake3::hash(b"42")));
     assert_eq!(check_code_checksum("42", &blake3::hash(b"42").as_bytes()[0..4].iter().copied().collect()), Ok(blake3::hash(b"42")));
     assert_eq!(check_code_checksum("42", &blake3::hash(b"42").as_bytes()[1..5].iter().copied().collect()), Err(Gen_Error::WRONG_CHECKSUM(blake3::hash(b"42"))));
