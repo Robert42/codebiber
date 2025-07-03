@@ -254,10 +254,6 @@ extern crate pest;
 extern crate pest_derive;
 
 #[macro_use]
-extern crate smallvec;
-use smallvec::SmallVec;
-
-#[macro_use]
 extern crate thiserror;
 
 #[cfg(test)]

@@ -12,7 +12,7 @@ pub type Syntax_Error = crate::pest::error::Error<Rule>;
 
 pub fn parse(code: &str) -> Result<Section_List>
 {
-  let mut sections = smallvec![];
+  let mut sections = Vec::with_capacity(16);
 
   let result = Section_Parser::parse(Rule::file, code)?;
   for r in result
@@ -111,10 +111,10 @@ mod test
   #[test]
   fn trivial()
   {
-    assert_eq!(find("").unwrap_display(), smallvec![] as Section_List);
-    assert_eq!(find("xyz").unwrap_display(), smallvec![HANDWRITTEN("xyz")] as Section_List);
-    assert_eq!(find("xyz\nuvw").unwrap_display(), smallvec![HANDWRITTEN("xyz\nuvw")] as Section_List);
-    assert_eq!(find("// << codegen foo >>\n// << /codegen >>\n").unwrap_display(), smallvec![
+    assert_eq!(find("").unwrap_display(), vec![] as Section_List);
+    assert_eq!(find("xyz").unwrap_display(), vec![HANDWRITTEN("xyz")] as Section_List);
+    assert_eq!(find("xyz\nuvw").unwrap_display(), vec![HANDWRITTEN("xyz\nuvw")] as Section_List);
+    assert_eq!(find("// << codegen foo >>\n// << /codegen >>\n").unwrap_display(), vec![
       CODEGEN{
         identifier: "foo",
         code: "",
@@ -139,7 +139,7 @@ mod test
     let code = "x\ny\nz\n  // << codegen blub >>\n  uvw\n // << /codegen >>\nabc";
     assert_eq!(
       find(code).unwrap_display(),
-      smallvec![
+      vec![
         HANDWRITTEN("x\ny\nz\n"),
         CODEGEN{
           identifier: "blub",

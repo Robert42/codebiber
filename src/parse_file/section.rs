@@ -15,5 +15,5 @@ pub struct Marker<'a>
   pub after_marker: &'a str,
 }
 
-pub type Section_List<'a> = SmallVec<[Section<'a> ; 8]>;
+pub type Section_List<'a> = Vec<Section<'a>>;
 use crate::indentation::Indentation;
