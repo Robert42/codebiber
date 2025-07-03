@@ -41,10 +41,6 @@ pub fn parse<'a>(line: &'a str) -> Result<Line<'a>>
     code = &line[index+END.len() .. ];
     skip_while(&mut code, |x| x==' ');
     let checksum = eat_while(&mut code, |x| char::is_ascii_hexdigit(&x));
-    if checksum.len()%2 != 0
-    {
-      todo!();
-    }
     skip_while(&mut code, |x| x==' ');
     expect(&mut code, TAG_END)?;
     let after_marker = code;

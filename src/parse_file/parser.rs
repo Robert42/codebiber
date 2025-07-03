@@ -11,6 +11,10 @@ pub enum Syntax_Error
   EXPECTED_SNIPPET(&'static str),
   #[error("Unexpected end")]
   UNEXPECTED_END,
+  #[error("Too long checksum")]
+  CHECKSUM_TOO_LONG,
+  #[error("Odd number of hex digits do not encode bytes")]
+  CHECKSUM_NOT_EVEN,
 }
 
 pub fn parse<'a>(full_code: &'a str) -> Result<Section_List<'a>>
@@ -64,7 +68,7 @@ impl<'a> State_Machine<'a>
     (CODEGEN{..}, Line::BEGIN_CODEGEN{..}) => todo!("error!"),
     (CODEGEN{marker: begin, identifier, code}, Line::END_CODEGEN{marker: end, checksum}) =>
     {
-      let checksum = parse_checksum(checksum);
+      let checksum = parse_checksum(checksum)?;
       let code = code.unwrap_or(&line_span[..0]);
       let code = slice_join(code, &line_span[..0]);
       sections.push(Section::CODEGEN{identifier, code, checksum, begin, end});
@@ -109,10 +113,16 @@ fn slice_join<'a>(full_slice: &'a str, a: &'a str, b: &'a str) -> &'a str
   return &full_slice[begin .. end];
 }
 
-fn parse_checksum(checksum: &str) -> Vec<u8>
+fn parse_checksum(checksum: &str) -> Result<Vec<u8>, Syntax_Error>
 {
-  debug_assert!(checksum.len() <= 64, "I expect the parser to guarantee 32 less hex digits!\n{checksum:?}");
-  debug_assert_eq!(checksum.len()%2, 0, "I expect the parser to guarantee that");
+  if checksum.len() > 64 
+  {
+    return Err(Syntax_Error::CHECKSUM_TOO_LONG);
+  }
+  if checksum.len()%2 != 0
+  {
+    return Err(Syntax_Error::CHECKSUM_NOT_EVEN);
+  }
 
   let mut xs = Vec::<u8>::with_capacity(32);
 
@@ -121,7 +131,7 @@ fn parse_checksum(checksum: &str) -> Vec<u8>
   {
     xs.push(u8_from_hex(digit_pair));
   }
-  xs
+  return Ok(xs);
 }
 
 fn hex_digit(digit: u8) -> u8
