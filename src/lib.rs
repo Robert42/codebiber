@@ -60,25 +60,24 @@ This results in the  generated code section
 ```c
 // << codegen foo >>
 void autogen_line_foo();
-// << /codegen aaa272 >>
+// << /codegen 8fb912f5 >>
 ```
 
 ```c
 // << codegen bar >>
 void autogen_line_bar1();
 void autogen_line_bar2();
-// << /codegen 00a214 >>
+// << /codegen 88c5186d >>
 ```
 
 ```c
 // << codegen baz >>
 void generated_line_by_some_other_function();
-// << /codegen 810c07 >>
+// << /codegen ded33021 >>
 ```
 
 Note the hashsums. They protect against overwritting accidental modifications.
-They are simply the first few bytes of a blake3 hahsum
-(how many [can be configured](Config)).
+They are simply a crc32 hahsum.
 
 ```rust
 extern crate codebiber;
@@ -88,31 +87,25 @@ void handwritten_line1();
 void handwritten_line2();
 
 // << codegen foo >>
-// << /codegen >>
+// << /codegen 00000000 >>
 
 void handwritten_line3();
 
   // << codegen bar >>
-  // << /codegen >>
+  // << /codegen 00000000 >>
 
 void handwritten_line4();
 
 // << codegen baz >>
 void generated_line_by_some_other_function();
-// << /codegen >>
+// << /codegen ded33021 >>
 
 void handwritten_line5();
 ";
               
 fn main() -> codebiber::Result
 {
-  let cfg = codebiber::Config{
-    // Anything checksum length other than 0 will catch unintended modifications
-    // since the last modification.
-    checksum_bytes_to_store: 3,
-  };
-
-  let actual_output = codebiber::generate(INPUT, cfg, gen_code_lines)?;
+  let actual_output = codebiber::generate(INPUT, gen_code_lines)?;
 
   assert_eq!(actual_output, Some(EXPECTED_OUTPUT.to_owned()));
 
@@ -136,20 +129,20 @@ void handwritten_line2();
 
 // << codegen foo >>
 void autogen_line_foo();
-// << /codegen aaa272 >>
+// << /codegen 8fb912f5 >>
 
 void handwritten_line3();
 
   // << codegen bar >>
   void autogen_line_bar1();
   void autogen_line_bar2();
-  // << /codegen 00a214 >>
+  // << /codegen 88c5186d >>
 
 void handwritten_line4();
 
 // << codegen baz >>
 void generated_line_by_some_other_function();
-// << /codegen 810c07 >>
+// << /codegen ded33021 >>
 
 void handwritten_line5();
 ";
@@ -184,13 +177,7 @@ const INPUT : &str = r"
               
 fn main() -> codebiber::Result
 {
-  let cfg = codebiber::Config{
-    // Anything checksum length other than 0 will catch unintended modifications
-    // since the last modification.
-    checksum_bytes_to_store: 2,
-  };
-
-  let actual_output = codebiber::generate(INPUT, cfg, gen_code_lines)?;
+  let actual_output = codebiber::generate(INPUT, gen_code_lines)?;
 
   assert_eq!(actual_output, Some(EXPECTED_OUTPUT.to_owned()));
 
@@ -211,22 +198,22 @@ fn gen_code_lines(name: &str) -> codebiber::Fmt_Result
 const EXPECTED_OUTPUT : &str = r"
 /* << codegen foo >> */
 void autogen_line_foo();
-(* << /codegen aaa2 >> *)
+(* << /codegen 8fb912f5 >> *)
 
 #if 0 // << codegen bar >>
 void autogen_line_bar1();
 void autogen_line_bar2();
-#endif // << /codegen 00a2 >>
+#endif // << /codegen 88c5186d >>
 
   ## << codegen bar >> For python like languages
   void autogen_line_bar1();
   void autogen_line_bar2();
-  -- << /codegen 00a2 >> Note how you can also write stuff after the marker
+  -- << /codegen 88c5186d >> Note how you can also write stuff after the marker
 
     esoteric langugage using keywords << codegen bar >> for comments
     void autogen_line_bar1();
     void autogen_line_bar2();
-    << /codegen 00a2 >>
+    << /codegen 88c5186d >>
 ";
 ```
 
@@ -239,17 +226,11 @@ pub mod parse_file;
 pub mod indentation;
 pub mod process;
 pub mod gen;
+pub mod crc32;
 
 pub use indentation::Indentation;
-pub use gen::{generate, Config, Fmt_Result};
+pub use gen::{generate, Fmt_Result};
 pub use process::{process_file, process_files, Process_Error as Error, Result};
-
-extern crate blake3;
 
 #[macro_use]
 extern crate thiserror;
-
-#[cfg(test)]
-extern crate unwrap_display;
-#[cfg(test)]
-use unwrap_display::UnwrapDisplay;

@@ -2,7 +2,7 @@
 pub enum Section<'a>
 {
   HANDWRITTEN(&'a str),
-  CODEGEN{identifier: &'a str, code: &'a str, checksum: Vec<u8>, begin: Marker<'a>, end: Marker<'a>},
+  CODEGEN{identifier: &'a str, code: &'a str, checksum: Option<crc32::Hash>, begin: Marker<'a>, end: Marker<'a>},
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -15,3 +15,4 @@ pub struct Marker<'a>
 
 pub type Section_List<'a> = Vec<Section<'a>>;
 use crate::indentation::Indentation;
+use crate::crc32;

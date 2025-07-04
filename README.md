@@ -20,5 +20,9 @@ Use at own risk.
 
 ### v0.1.0
 
-Remove all dependencies for regular builds
+Breaking changes:
+- Generated hashsums are not blake3 anymore
+
+Remove all dependencies for regular builds:
 - Reimplement the parser with a handwritten parser
+- Use crc32 instead of blake3

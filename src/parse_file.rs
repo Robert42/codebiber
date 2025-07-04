@@ -8,13 +8,15 @@ pub use parser::parse as find;
 
 pub type Result<T=(), E=Parse_Error> = std::result::Result<T, E>;
 
+pub use parser::Syntax_Error;
+
 #[derive(Clone, Debug, Error)]
 pub enum Parse_Error
 {
   #[error("syntax error: {0}")]
   SYNTAX(#[from] parser::Syntax_Error),
-  #[error("invalid blake3 checksum: {0}")]
-  INVALID_CHECKSUM(#[from] blake3::HexError),
+  #[error("invalid crc32 checksum: {0}")]
+  INVALID_CHECKSUM(&'static str),
 }
 
 impl PartialEq for Parse_Error
