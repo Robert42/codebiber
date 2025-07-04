@@ -1,73 +1,56 @@
-/*
-
-// SPDX-License-Identifier: 0BSD
-
 ///////////////////////////////////////////////////////////////////////////////
 //
-/// \file       crc32_small.c
-/// \brief      CRC32 calculation (size-optimized)
+//  Original Implementation:
+//  - Author:     Lasse Collin## crc32 source
+//  - Original License: 0BSD
+//  - Downloaded from
+//    - https://web.archive.org/web/20250704104106/https://tukaani.org/xz/#_licensing
+//    - https://web.archive.org/web/20250704103854/https://github.com/tukaani-project/xz
+//    - https://web.archive.org/web/20250704104455/https://github.com/tukaani-project/xz/blob/master/COPYING
+//    - https://web.archive.org/web/20250704104738/https://github.com/tukaani-project/xz/blob/master/COPYING.0BSD
+//    - https://web.archive.org/web/20250704103532/https://github.com/tukaani-project/xz/blob/master/src/liblzma/check/crc32_small.c
+//    - https://web.archive.org/web/20250704103711/https://raw.githubusercontent.com/tukaani-project/xz/refs/heads/master/src/liblzma/check/crc32_small.c
 //
-//  Author:     Lasse Collin
+//  Translated to Rust on 2025-07-04 by Robert Hildebrandt
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#include "check.h"
-#include "crc_common.h"
+const CRC32_TABLE : [u32 ; 256] = crc32_init();
 
-
-// The table is used by the LZ encoder too, thus it's not static like
-// in crc64_small.c.
-uint32_t lzma_crc32_table[1][256];
-
-
-#ifdef HAVE_FUNC_ATTRIBUTE_CONSTRUCTOR
-__attribute__((__constructor__))
-#endif
-static void
-crc32_init(void)
+const fn crc32_init() -> [u32 ; 256]
 {
-	static const uint32_t poly32 = UINT32_C(0xEDB88320);
+	const POLY32 : u32 = 0xEDB88320;
+	let mut crc32_table = [0_u32 ; 256];
 
-	for (size_t b = 0; b < 256; ++b) {
-		uint32_t r = b;
-		for (size_t i = 0; i < 8; ++i) {
-			if (r & 1)
-				r = (r >> 1) ^ poly32;
-			else
+	let mut b = 0;
+	while b < 256 {
+		let mut r : u32 = b as u32;
+		let mut i = 0;
+		while i < 8 {
+			if (r & 1) != 0
+			{
+				r = (r >> 1) ^ POLY32;
+			}else
+			{
 				r >>= 1;
+			}
+			i += 1;
 		}
 
-		lzma_crc32_table[0][b] = r;
+		crc32_table[b] = r;
+		b += 1;
 	}
 
-	return;
+	return crc32_table;
 }
 
-
-#ifndef HAVE_FUNC_ATTRIBUTE_CONSTRUCTOR
-extern void
-lzma_crc32_init(void)
+pub fn crc32(buf: &[u8], crc: u32) -> u32
 {
-	mythread_once(crc32_init);
-	return;
-}
-#endif
+	let mut crc = !crc;
 
-
-extern LZMA_API(uint32_t)
-lzma_crc32(const uint8_t *buf, size_t size, uint32_t crc)
-{
-#ifndef HAVE_FUNC_ATTRIBUTE_CONSTRUCTOR
-	lzma_crc32_init();
-#endif
-
-	crc = ~crc;
-
-	while (size != 0) {
-		crc = lzma_crc32_table[0][*buf++ ^ (crc & 0xFF)] ^ (crc >> 8);
-		--size;
+	for byte in buf.iter().copied() {
+		crc = CRC32_TABLE[(byte as u32 ^ (crc as u32 & 0xFF)) as usize] ^ (crc >> 8);
 	}
 
-	return ~crc;
+	return !crc;
 }
-*/
