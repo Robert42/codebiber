@@ -11,10 +11,8 @@ pub enum Syntax_Error
   EXPECTED_SNIPPET(&'static str),
   #[error("Unexpected end")]
   UNEXPECTED_END,
-  #[error("Too long checksum")]
-  CHECKSUM_TOO_LONG,
-  #[error("Odd number of hex digits do not encode bytes")]
-  CHECKSUM_NOT_EVEN,
+  #[error("Checksum has wrong length")]
+  CHECKSUM_WRONG_LENGTH,
   #[error("Nested code generatoin blocks are not supported")]
   NESTED_CODEGEN_NOT_SUPPORTED,
   #[error("`<< /codegen` without matching `<< codegen`")]
@@ -116,42 +114,20 @@ fn slice_join<'a>(full_slice: &'a str, a: &'a str, b: &'a str) -> &'a str
   return &full_slice[begin .. end];
 }
 
-fn parse_checksum(checksum: &str) -> Result<Vec<u8>, Syntax_Error>
+fn parse_checksum(checksum: &str) -> Result<Option<crc32::Hash>, Syntax_Error>
 {
-  if checksum.len() > 64 
+  if checksum.len() == 0
   {
-    return Err(Syntax_Error::CHECKSUM_TOO_LONG);
+    return Ok(None);
   }
-  if checksum.len()%2 != 0
+  if checksum.len() != crc32::CHECKSUM_TEXT_LEN 
   {
-    return Err(Syntax_Error::CHECKSUM_NOT_EVEN);
+    return Err(Syntax_Error::CHECKSUM_WRONG_LENGTH);
   }
 
-  let mut xs = Vec::<u8>::with_capacity(32);
+  assert!(checksum.chars().all(|x| x.is_ascii_hexdigit()), "The parser should have guaranteed it!");
 
-  let checksum_bytes = checksum.as_bytes();
-  for digit_pair in (0..checksum_bytes.len()/2).map(|i| [checksum_bytes[i*2], checksum_bytes[i*2+1]])
-  {
-    xs.push(u8_from_hex(digit_pair));
-  }
-  return Ok(xs);
-}
-
-fn hex_digit(digit: u8) -> u8
-{
-  match digit
-  {
-    b'0' ..= b'9' => digit - b'0',
-    b'a' ..= b'f' => digit - b'a' + 10,
-    b'A' ..= b'F' => digit - b'A' + 10,
-    _ => unreachable!("{digit:?}"),
-  }
-}
-
-fn u8_from_hex(digits: [u8; 2]) -> u8
-{
-  debug_assert!(digits[0].is_ascii_hexdigit() && digits[1].is_ascii_hexdigit());
-  (hex_digit(digits[0])<<4) | hex_digit(digits[1])
+  return Ok(Some(u32::from_str_radix(checksum, 16).expect("Right number of hex chars")));
 }
 
 #[cfg(test)]
@@ -181,7 +157,7 @@ mod test
       CODEGEN{
         identifier: "foo",
         code: "",
-        checksum: Vec::new(),
+        checksum: None,
         begin: Marker{
           indentation: I(0),
           before_marker: "// ",
@@ -207,7 +183,7 @@ mod test
         CODEGEN{
           identifier: "blub",
           code: "  uvw\n",
-          checksum: Vec::new(),
+          checksum: None,
           begin: Marker{
             indentation: I(2),
             before_marker: "// ",
@@ -222,10 +198,11 @@ mod test
         HANDWRITTEN("abc"),
       ] as Section_List);
   }
-  
+
   #[test]
   fn test_checksum()
   {
+/* TODO reuse for base64 encoding? Or remove?
     assert_eq!(hex_digit(b'0'), 0);
     assert_eq!(hex_digit(b'9'), 9);
     assert_eq!(hex_digit(b'a'), 10);
@@ -233,13 +210,15 @@ mod test
     assert_eq!(hex_digit(b'A'), 10);
     assert_eq!(hex_digit(b'F'), 15);
     assert_eq!(u8_from_hex([b'4', b'2']), 0x42);
+*/
 
-    assert_eq!(parse_checksum("").unwrap().as_slice(), &[]);
-    assert_eq!(parse_checksum("42").unwrap().as_slice(), &[0x42]);
-    assert_eq!(parse_checksum("0123456789abcdef").unwrap().as_slice(), &[0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef]);
+    assert_eq!(parse_checksum("").unwrap(), None);
+    assert_eq!(parse_checksum("42"), Err(Syntax_Error::CHECKSUM_WRONG_LENGTH));
+    assert_eq!(parse_checksum("01234567").unwrap(), Some(0x01234567));
+    assert_eq!(parse_checksum("0123456789abcdef"), Err(Syntax_Error::CHECKSUM_WRONG_LENGTH));
 
-    let checksum = blake3::hash(b"42");
-    assert_eq!(parse_checksum(checksum.to_string().as_str()).unwrap().as_slice(), checksum.as_bytes());
+    let checksum = crc32::hash(b"42");
+    assert_eq!(parse_checksum(crc32::fmt(checksum).as_str()).unwrap(), Some(checksum));
   }
 
   use Indentation as I;

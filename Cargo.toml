@@ -10,7 +10,6 @@ repository = "https://github.com/Robert42/codebiber"
 keywords = ["codegen"]
 
 [dependencies]
-blake3 = "=1.4.0"
 thiserror = "1.0.50"
 
 [dev-dependencies]

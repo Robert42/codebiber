@@ -77,7 +77,7 @@ void generated_line_by_some_other_function();
 ```
 
 Note the hashsums. They protect against overwritting accidental modifications.
-They are simply the first few bytes of a blake3 hahsum
+They are simply the first few bytes of a crc32 hahsum
 (how many [can be configured](Config)).
 
 ```rust
@@ -242,10 +242,8 @@ pub mod gen;
 pub mod crc32;
 
 pub use indentation::Indentation;
-pub use gen::{generate, Config, Fmt_Result};
+pub use gen::{generate, Fmt_Result};
 pub use process::{process_file, process_files, Process_Error as Error, Result};
-
-extern crate blake3;
 
 #[macro_use]
 extern crate thiserror;

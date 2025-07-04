@@ -3,7 +3,7 @@
 
 extern crate codebiber;
 use codebiber::{
-  Indentation, Config, generate,
+  Indentation, generate,
 };
 
 extern crate proptest;
@@ -12,7 +12,7 @@ use proptest::prelude::*;
 #[macro_use]
 extern crate lazy_regex;
 
-extern crate blake3;
+use codebiber::crc32;
 
 extern crate unwrap_display;
 use unwrap_display::UnwrapDisplay;
@@ -21,7 +21,7 @@ use unwrap_display::UnwrapDisplay;
 enum Section
 {
   HANDWRITTEN(String),
-  GENERATED{code: String, name: String, surround: Surround, generated_with_config: Config, action: Action},
+  GENERATED{code: String, name: String, surround: Surround, with_checksum: bool, action: Action},
 }
 
 #[derive(Clone, Debug)]
@@ -43,15 +43,16 @@ fn format_input(sections: &[Section]) -> String
     match s
     {
       HANDWRITTEN(c) => out += c.as_str(),
-      GENERATED{code, name, generated_with_config, surround, action: _} =>
-        format_generated_code(&mut out, code.as_str(), name.as_str(), surround, *generated_with_config).unwrap(),
+      GENERATED{code, name, with_checksum, surround, action: _} =>
+        format_generated_code(&mut out, code.as_str(), name.as_str(), surround, *with_checksum).unwrap(),
     }
   }
   out
 }
 
-fn format_expected_output(sections: &[Section], cfg: Config) -> Option<String>
+fn format_expected_output(sections: &[Section]) -> Option<String>
 {
+  let with_checksum = true;
   let mut has_some_change = false;
   let mut out = String::new();
   for s in sections.iter()
@@ -59,13 +60,12 @@ fn format_expected_output(sections: &[Section], cfg: Config) -> Option<String>
     match s
     {
       HANDWRITTEN(c) => out += c.as_str(),
-      GENERATED{code: old_code, name, generated_with_config, surround, action} => {
-        has_some_change = has_some_change || generated_with_config!=&cfg;
+      GENERATED{code: old_code, name, with_checksum: _, surround, action} => {
         let code = match action {
           SKIP | KEEP => old_code,
           REPLACE_WITH(new_code) => {has_some_change = has_some_change || new_code!=old_code; new_code}
         };
-        format_generated_code(&mut out, code.as_str(), name.as_str(), surround, cfg).unwrap()
+        format_generated_code(&mut out, code.as_str(), name.as_str(), surround, with_checksum).unwrap()
       }
     }
   }
@@ -77,20 +77,20 @@ fn format_expected_output(sections: &[Section], cfg: Config) -> Option<String>
   }
 }
 
-fn format_generated_code(out: &mut String, code: &str, name: &str, surround: &Surround, config: Config) -> std::fmt::Result
+fn format_generated_code(out: &mut String, code: &str, name: &str, surround: &Surround, with_checksum: bool) -> std::fmt::Result
 {
   let mut code = code.to_owned();
   ensure_newline(&mut code);
-  let hash = blake3::hash(code.as_bytes()).to_hex();
+  let hash = crc32::fmt(crc32::hash(code.as_bytes()));
   let code = surround.indent.indent_str(code.as_str());
 
   use std::fmt::Write;
   surround.begin(out, Some(name))?;
   write!(out, "{code}")?;
-  let suffix = match config.checksum_bytes_to_store
+  let suffix = match with_checksum
   {
-    0 => None,
-    n => Some(&hash[..2*n as usize]),
+    false => None,
+    true => Some(hash.as_str()),
   };
   surround.end::<&str>(out, suffix)
 }
@@ -144,10 +144,11 @@ impl Surround_Marker
 proptest!
 {
   #[test]
-  fn roundtrip(sections in many_sections(), cfg in config())
+
+  fn roundtrip(sections in many_sections())
   {
     let input = format_input(&sections[..]);
-    let expected = format_expected_output(&sections[..], cfg);
+    let expected = format_expected_output(&sections[..]);
 
     let mut codes : Vec<Option<String>> = sections.iter().filter_map(|s| match s {
         HANDWRITTEN(..) => None,
@@ -156,7 +157,7 @@ proptest!
         | GENERATED { action: REPLACE_WITH(code), .. } => Some(Some(code.clone())),
     }).collect();
     codes.reverse();
-    let actual = generate(input.as_str(), cfg, move |_| Ok(codes.pop().unwrap())).expect_display_code(input.as_str());
+    let actual = generate(input.as_str(), move |_| Ok(codes.pop().unwrap())).expect_display_code(input.as_str());
 
     assert_eq!(actual, expected, "   input: {:?}", input.as_str());
   }
@@ -174,21 +175,11 @@ fn many_sections() -> impl Strategy<Value = Vec<Section>>
 
   let section = prop_oneof![
     (code(), prop::bool::ANY).prop_map(|(code, tailing_linebreak)| Section::HANDWRITTEN(set_tailing_linebreak(code, tailing_linebreak))),
-    (code(), ident(), config(), surround, action).prop_map(|(code, name, generated_with_config, surround, action)|
-      Section::GENERATED{code, name, generated_with_config, surround, action}),
+    (code(), ident(), prop::bool::ANY, surround, action).prop_map(|(code, name, with_checksum, surround, action)|
+      Section::GENERATED{code, name, with_checksum, surround, action}),
   ];
 
   prop::collection::vec(section, 0..16)
-}
-
-fn config() -> impl Strategy<Value = Config>
-{
-  prop_oneof![
-    (0..(blake3::KEY_LEN as u8)).prop_map(|checksum_bytes_to_store|
-      Config{
-        checksum_bytes_to_store,
-    }),
-  ]
 }
 
 fn surround() -> impl Strategy<Value = Surround>
