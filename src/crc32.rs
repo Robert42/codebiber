@@ -54,3 +54,19 @@ pub fn crc32(buf: &[u8], crc: u32) -> u32
 
 	return !crc;
 }
+
+#[test]
+fn test()
+{
+/*
+	let samples : Vec<&[u8]> = vec![b"x", b"xy", b"xyz", ];
+	for bytes in samples.into_iter()
+	{
+		println!("assert_eq!(crc32({bytes:?}, 0), 0x{:08x});", crc32(bytes, 0));
+	}
+*/
+
+  assert_eq!(crc32(&[120], 0), 0x8cdc1683);                                                                                                                                                 
+  assert_eq!(crc32(&[120, 121], 0), 0x8fe62899);                                                                                                                                            
+  assert_eq!(crc32(&[120, 121, 122], 0), 0xeb8eba67);
+}
