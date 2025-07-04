@@ -17,3 +17,8 @@ Use at own risk.
 
 - Minumum supported rust version is now 1.63 (for regular builds, not dev builds) 05ed194ddaa2127b671c0345cfdf8e4330419242
 - Not using unstable features anymore 0341b2d033173a4f7d6e084ae14bd36f623db9d5
+
+### v0.1.0
+
+Remove all dependencies for regular builds
+- Reimplement the parser with a handwritten parser
