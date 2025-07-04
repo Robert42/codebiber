@@ -239,6 +239,7 @@ pub mod parse_file;
 pub mod indentation;
 pub mod process;
 pub mod gen;
+pub mod crc32;
 
 pub use indentation::Indentation;
 pub use gen::{generate, Config, Fmt_Result};

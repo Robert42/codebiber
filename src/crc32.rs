@@ -1,3 +1,5 @@
+/*
+
 // SPDX-License-Identifier: 0BSD
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -68,3 +70,4 @@ lzma_crc32(const uint8_t *buf, size_t size, uint32_t crc)
 
 	return ~crc;
 }
+*/
