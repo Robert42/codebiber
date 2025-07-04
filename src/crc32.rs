@@ -78,7 +78,7 @@ fn crc32(buf: &[u8], crc: u32) -> u32
 #[test]
 fn test()
 {
-	let samples : Vec<&[u8]> = vec![b"137\n", ];
+	let samples : Vec<&[u8]> = vec![b"void autogen_line_bar1();\nvoid autogen_line_bar2();\n", ];
 	for bytes in samples.into_iter()
 	{
 		println!("assert_eq!(crc32({bytes:?}, 0), 0x{:08x});", crc32(bytes, 0));
@@ -97,4 +97,7 @@ fn test()
   assert_eq!(hash(b"42\n"), 0xd1862931);
   assert_eq!(hash(b"137\n"), 0x3f2c523b);
   assert_eq!(hash(b"\n"), 0x32d70693);
+  assert_eq!(hash(b"void generated_line_by_some_other_function();\n"), 0xded33021);
+  assert_eq!(hash(b"void autogen_line_foo();\n"), 0x8fb912f5);
+  assert_eq!(hash(b"void autogen_line_bar1();\nvoid autogen_line_bar2();\n"), 0x88c5186d);
 }

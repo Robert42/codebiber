@@ -56,16 +56,16 @@ where F: FnMut(&str) -> Fmt_Result
 
 fn check_code_checksum(code: &str, loaded_checksam: Option<crc32::Hash>) -> Result<crc32::Hash>
 {
-  let actual_hashsum = crc32::hash(code.as_bytes());
-  if let Some(loaded_checksam) = loaded_checksam
+  let actual = crc32::hash(code.as_bytes());
+  if let Some(loaded) = loaded_checksam
   {
-    if actual_hashsum != loaded_checksam
+    if actual != loaded
     {
-      return Err(Gen_Error::WRONG_CHECKSUM(actual_hashsum));
+      return Err(Gen_Error::WRONG_CHECKSUM{actual, loaded});
     }
   }
 
-  return Ok(actual_hashsum);
+  return Ok(actual);
 }
 
 pub type Result<T=(), E=Gen_Error> = std::result::Result<T, E>;
@@ -77,8 +77,8 @@ pub enum Gen_Error
   FIND(#[from] crate::parse_file::Parse_Error),
   #[error("fmt error: {0}")]
   FMT(#[from] std::fmt::Error),
-  #[error("wrong crc32 checksum. Was the code modified in between?\nActual crc32 checksum: {0}")]
-  WRONG_CHECKSUM(crc32::Hash),
+  #[error("wrong crc32 checksum. Was the code modified in between?\nLoaded crc32 checksum: 0x{loaded:08x}\nActual crc32 checksum: 0x{actual:08x?}")]
+  WRONG_CHECKSUM{actual: crc32::Hash, loaded: crc32::Hash},
   #[error("The code generating function modified code outside the code section")]
   FORBIDDEN,
   #[error("The old code has a smaller indentation than the marker")]
@@ -93,17 +93,17 @@ mod test
   #[test]
   fn test_trivial()
   {
-    assert_eq!(generate("", |_| Ok(Some("abc".to_owned()))).unwrap_display(), None);
-    assert_eq!(generate("xyz", |_| Ok(Some("abc".to_owned()))).unwrap_display(), None);
+    assert_eq!(generate("", |_| Ok(Some("abc".to_owned()))).unwrap(), None);
+    assert_eq!(generate("xyz", |_| Ok(Some("abc".to_owned()))).unwrap(), None);
   }
 
   #[test]
   fn test_simple_replace()
   {
-    assert_eq!(generate("<< codegen foo >>\nxyz\n<< /codegen e1ea7cd2 >>", |_| Ok(Some("xyz".to_owned())) ).unwrap_display(), None);
-    assert_eq!(generate("<< codegen foo >>\nxyz\n<< /codegen >>", |_| Ok(Some("uvw".to_owned())) ).unwrap_display(), Some("<< codegen foo >>\nuvw\n<< /codegen ad729d7f >>\n".to_owned()));
-    assert_eq!(generate("<< codegen foo >>\nremove me\n<< /codegen >>", |_| Ok(Some("".to_owned()))).unwrap_display(), Some("<< codegen foo >>\n<< /codegen 00000000 >>\n".to_owned()));
-    assert_eq!(generate("abc\ndefg<< codegen foo >>hijk\nxyz\nlmnop<< /codegen >>qrst\nuvw", |_| Ok(Some("uvw".to_owned())) ).unwrap_display(), Some("abc\ndefg<< codegen foo >>hijk\nuvw\nlmnop<< /codegen ad729d7f >>qrst\nuvw".to_owned()));
+    assert_eq!(generate("<< codegen foo >>\nxyz\n<< /codegen e1ea7cd2 >>", |_| Ok(Some("xyz".to_owned())) ).unwrap(), None);
+    assert_eq!(generate("<< codegen foo >>\nxyz\n<< /codegen >>", |_| Ok(Some("uvw".to_owned())) ).unwrap(), Some("<< codegen foo >>\nuvw\n<< /codegen ad729d7f >>\n".to_owned()));
+    assert_eq!(generate("<< codegen foo >>\nremove me\n<< /codegen >>", |_| Ok(Some("".to_owned()))).unwrap(), Some("<< codegen foo >>\n<< /codegen 00000000 >>\n".to_owned()));
+    assert_eq!(generate("abc\ndefg<< codegen foo >>hijk\nxyz\nlmnop<< /codegen >>qrst\nuvw", |_| Ok(Some("uvw".to_owned())) ).unwrap(), Some("abc\ndefg<< codegen foo >>hijk\nuvw\nlmnop<< /codegen ad729d7f >>qrst\nuvw".to_owned()));
   }
 
   #[test]
@@ -119,7 +119,7 @@ mod test
         _ => unreachable!("{i}"),
         };
         Ok(Some(code.to_owned()))
-      }).unwrap_display(), Some("<< codegen answer >>\n42\n<< /codegen d1862931 >>\n<< codegen finestructure_constant >>\n137\n<< /codegen 3f2c523b >>\n".to_owned()));
+      }).unwrap(), Some("<< codegen answer >>\n42\n<< /codegen d1862931 >>\n<< codegen finestructure_constant >>\n137\n<< /codegen 3f2c523b >>\n".to_owned()));
   }
   
   #[test]
@@ -146,19 +146,19 @@ mod test
     }
 
     // differenet lengths
-    assert_eq!(generate("<< codegen empty >>\n<< /codegen >>", gen).unwrap_display(), Some("<< codegen empty >>\n<< /codegen 00000000 >>\n".to_owned()));
+    assert_eq!(generate("<< codegen empty >>\n<< /codegen >>", gen).unwrap(), Some("<< codegen empty >>\n<< /codegen 00000000 >>\n".to_owned()));
     assert_eq!(generate("<< codegen empty >>\n<< /codegen 00 >>", gen), Err(Gen_Error::FIND(parse_file::Parse_Error::SYNTAX(parse_file::Syntax_Error::CHECKSUM_WRONG_LENGTH))));
     
     // replace content
-    assert_eq!(generate("<< codegen 42 >>\n<< /codegen 00000000>>", gen).unwrap_display(), Some("<< codegen 42 >>\n42\n<< /codegen d1862931 >>\n".to_owned()));
-    assert_eq!(generate("<< codegen empty >>\n42\n<< /codegen d1862931 >>", gen).unwrap_display(), Some("<< codegen empty >>\n<< /codegen 00000000 >>\n".to_owned()));
+    assert_eq!(generate("<< codegen 42 >>\n<< /codegen 00000000>>", gen).unwrap(), Some("<< codegen 42 >>\n42\n<< /codegen d1862931 >>\n".to_owned()));
+    assert_eq!(generate("<< codegen empty >>\n42\n<< /codegen d1862931 >>", gen).unwrap(), Some("<< codegen empty >>\n<< /codegen 00000000 >>\n".to_owned()));
     
     // newline handling
-    assert_eq!(generate("<< codegen 42_newline >>\n42\n<< /codegen d1862931>>", gen).unwrap_display(), None);
-    assert_eq!(generate("<< codegen newline >>\n<< /codegen 00000000>>", gen).unwrap_display(), Some("<< codegen newline >>\n\n<< /codegen 32d70693 >>\n".to_owned()));
+    assert_eq!(generate("<< codegen 42_newline >>\n42\n<< /codegen d1862931>>", gen).unwrap(), None);
+    assert_eq!(generate("<< codegen newline >>\n<< /codegen 00000000>>", gen).unwrap(), Some("<< codegen newline >>\n\n<< /codegen 32d70693 >>\n".to_owned()));
 
     // bug: dirty flag overwritten:
-    assert_eq!(generate("<< codegen empty >>\n<< /codegen 00000000 >>\n<< codegen empty >>\n<< /codegen >>", gen).unwrap_display(), Some("<< codegen empty >>\n<< /codegen 00000000 >>\n<< codegen empty >>\n<< /codegen 00000000 >>\n".to_owned()));
+    assert_eq!(generate("<< codegen empty >>\n<< /codegen 00000000 >>\n<< codegen empty >>\n<< /codegen >>", gen).unwrap(), Some("<< codegen empty >>\n<< /codegen 00000000 >>\n<< codegen empty >>\n<< /codegen 00000000 >>\n".to_owned()));
   }
   
   #[test]
@@ -174,8 +174,8 @@ mod test
       Ok(Some(x.into()))
     }
 
-    assert_eq!(generate("<< codegen x >>\n<< /codegen >>", gen).unwrap_display(), Some("<< codegen x >>\n42\n137\n1337\n<< /codegen dda9452f >>\n".to_owned()));
-    assert_eq!(generate("  << codegen x >>\n<< /codegen >>", gen).unwrap_display(), Some("  << codegen x >>\n  42\n  137\n  1337\n  << /codegen dda9452f >>\n".to_owned()));
+    assert_eq!(generate("<< codegen x >>\n<< /codegen >>", gen).unwrap(), Some("<< codegen x >>\n42\n137\n1337\n<< /codegen dda9452f >>\n".to_owned()));
+    assert_eq!(generate("  << codegen x >>\n<< /codegen >>", gen).unwrap(), Some("  << codegen x >>\n  42\n  137\n  1337\n  << /codegen dda9452f >>\n".to_owned()));
   }
   
   #[test]
@@ -191,8 +191,8 @@ mod test
       Ok(Some(x.into()))
     }
 
-    assert_eq!(generate("<< codegen x >>\n<< /codegen >>", gen).unwrap_display(), Some("<< codegen x >>\n42\n  137\n1337\n<< /codegen f1656245 >>\n".to_owned()));
-    assert_eq!(generate("  << codegen x >>\n<< /codegen >>", gen).unwrap_display(), Some("  << codegen x >>\n  42\n    137\n  1337\n  << /codegen f1656245 >>\n".to_owned()));
+    assert_eq!(generate("<< codegen x >>\n<< /codegen >>", gen).unwrap(), Some("<< codegen x >>\n42\n  137\n1337\n<< /codegen f1656245 >>\n".to_owned()));
+    assert_eq!(generate("  << codegen x >>\n<< /codegen >>", gen).unwrap(), Some("  << codegen x >>\n  42\n    137\n  1337\n  << /codegen f1656245 >>\n".to_owned()));
   }
   
   #[test]
@@ -203,11 +203,11 @@ mod test
       Ok(None)
     }
 
-    assert_eq!(generate("<< codegen x >>\nxyuz\nuv\n<< /codegen 2fddd919 >>", ignore).unwrap_display(), None);
-    assert_eq!(generate("<< codegen x >>\nxyuz\nuv\n<< /codegen 2fddd919>>", ignore).unwrap_display(), None);
-    assert_eq!(generate("<< codegen x >>\nxyuz\nuv\n<< /codegen >>", ignore).unwrap_display(), Some("<< codegen x >>\nxyuz\nuv\n<< /codegen 2fddd919 >>\n".to_string()));
-    assert_eq!(generate("  << codegen x >>\n  xyuz\n  <>\n    []\n  uv\n<< /codegen c1e2b1d0 >>", ignore).unwrap_display(), None);
-    assert_eq!(generate("  << codegen x >>\n  xyuz\n  <>\n    []\n  uv\n<< /codegen >>", ignore).unwrap_display(), Some("  << codegen x >>\n  xyuz\n  <>\n    []\n  uv\n  << /codegen c1e2b1d0 >>\n".to_string()));
+    assert_eq!(generate("<< codegen x >>\nxyuz\nuv\n<< /codegen 2fddd919 >>", ignore).unwrap(), None);
+    assert_eq!(generate("<< codegen x >>\nxyuz\nuv\n<< /codegen 2fddd919>>", ignore).unwrap(), None);
+    assert_eq!(generate("<< codegen x >>\nxyuz\nuv\n<< /codegen >>", ignore).unwrap(), Some("<< codegen x >>\nxyuz\nuv\n<< /codegen 2fddd919 >>\n".to_string()));
+    assert_eq!(generate("  << codegen x >>\n  xyuz\n  <>\n    []\n  uv\n<< /codegen c1e2b1d0 >>", ignore).unwrap(), None);
+    assert_eq!(generate("  << codegen x >>\n  xyuz\n  <>\n    []\n  uv\n<< /codegen >>", ignore).unwrap(), Some("  << codegen x >>\n  xyuz\n  <>\n    []\n  uv\n  << /codegen c1e2b1d0 >>\n".to_string()));
   }
 }
 

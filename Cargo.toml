@@ -11,6 +11,3 @@ keywords = ["codegen"]
 
 [dependencies]
 thiserror = "1.0.50"
-
-[dev-dependencies]
-unwrap_display = "0.0.1"

@@ -150,10 +150,10 @@ mod test
   #[test]
   fn trivial()
   {
-    assert_eq!(find("").unwrap_display(), vec![] as Section_List);
-    assert_eq!(find("xyz").unwrap_display(), vec![HANDWRITTEN("xyz")] as Section_List);
-    assert_eq!(find("xyz\nuvw").unwrap_display(), vec![HANDWRITTEN("xyz\nuvw")] as Section_List);
-    assert_eq!(find("// << codegen foo >>\n// << /codegen >>\n").unwrap_display(), vec![
+    assert_eq!(find("").unwrap(), vec![] as Section_List);
+    assert_eq!(find("xyz").unwrap(), vec![HANDWRITTEN("xyz")] as Section_List);
+    assert_eq!(find("xyz\nuvw").unwrap(), vec![HANDWRITTEN("xyz\nuvw")] as Section_List);
+    assert_eq!(find("// << codegen foo >>\n// << /codegen >>\n").unwrap(), vec![
       CODEGEN{
         identifier: "foo",
         code: "",
@@ -177,7 +177,7 @@ mod test
   {
     let code = "x\ny\nz\n  // << codegen blub >>\n  uvw\n // << /codegen >>\nabc";
     assert_eq!(
-      find(code).unwrap_display(),
+      find(code).unwrap(),
       vec![
         HANDWRITTEN("x\ny\nz\n"),
         CODEGEN{
