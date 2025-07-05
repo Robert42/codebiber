@@ -61,7 +61,7 @@ fn parse_identifier<'a>(code: &mut &'a str) -> Result<&'a str>
     return Err(Syntax_Error::EXPECTED_IDENTIFIER)
   }
   let index = code.rfind(">>").unwrap_or(code.len());
-  let ident = &(*code)[..index].trim();
+  let ident = &(*code)[..index].trim_end();
   let rest = &(*code)[ident.len()..];
   *code = rest;
   return Ok(ident);
