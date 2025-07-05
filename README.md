@@ -21,8 +21,10 @@ Use at own risk.
 ### v0.1.0
 
 Breaking changes:
-- Generated hashsums are not blake3 anymore
+- Generated hashsums are not blake3 anymore but crc32 sums
+- length of the stored sum is not configurable anymore
+- process_files expects now a function that accepts the file path
 
-Remove all dependencies for regular builds:
+Remove all dependencies:
 - Reimplement the parser with a handwritten parser
 - Use crc32 instead of blake3
