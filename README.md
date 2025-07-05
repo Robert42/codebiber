@@ -24,6 +24,7 @@ Breaking changes:
 - Generated hashsums are not blake3 anymore but crc32 sums
 - length of the stored sum is not configurable anymore
 - process_files expects now a function that accepts the file path
+- identifiers can contain arbitrary inline-characters before the last `>>` in the line same.
 
 Remove all dependencies:
 - Reimplement the parser with a handwritten parser
