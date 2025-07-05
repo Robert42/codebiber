@@ -41,9 +41,15 @@ impl<'a> State_Machine<'a>
 {
   fn consume_line(&mut self, full_code: &'a str, sections: &mut Vec<Section<'a>>, line_span: &'a str) -> Result<()>
   {
+    let syntax_error = |e: Syntax_Error| -> Parse_Error
+    {
+      let line = slice_join(full_code, &full_code[..0], &line_span[..0]).lines().count();
+      return Parse_Error::SYNTAX(Error_Location{path: None, line}, e);
+    };
+
     use self::line::Line;
     use State_Machine::*;
-    let line = self::line::parse(line_span).map_err(Parse_Error::SYNTAX)?;
+    let line = self::line::parse(line_span).map_err(syntax_error)?;
 
     let slice_join = |a, b| self::slice_join(full_code, a, b);
     
@@ -59,16 +65,16 @@ impl<'a> State_Machine<'a>
     }
     (CODEGEN{marker, identifier, code: None}, Line::CODE(span)) => CODEGEN{marker, identifier, code: Some(span)},
     (CODEGEN{marker, identifier, code: Some(code)}, Line::CODE(span)) => CODEGEN{marker, identifier, code: Some(slice_join(code, span))},
-    (CODEGEN{..}, Line::BEGIN_CODEGEN{..}) => Err(Syntax_Error::NESTED_CODEGEN_NOT_SUPPORTED).map_err(Parse_Error::SYNTAX)?,
+    (CODEGEN{..}, Line::BEGIN_CODEGEN{..}) => Err(Syntax_Error::NESTED_CODEGEN_NOT_SUPPORTED).map_err(syntax_error)?,
     (CODEGEN{marker: begin, identifier, code}, Line::END_CODEGEN{marker: end, checksum}) =>
     {
-      let checksum = parse_checksum(checksum).map_err(Parse_Error::SYNTAX)?;
+      let checksum = parse_checksum(checksum).map_err(syntax_error)?;
       let code = code.unwrap_or(&line_span[..0]);
       let code = slice_join(code, &line_span[..0]);
       sections.push(Section::CODEGEN{identifier, code, checksum, begin, end});
       NOTHING
     }
-    (_, Line::END_CODEGEN{..}) => Err(Syntax_Error::CODEGEN_END_WITHOUT_MATCHING_BEGIN).map_err(Parse_Error::SYNTAX)?,
+    (_, Line::END_CODEGEN{..}) => Err(Syntax_Error::CODEGEN_END_WITHOUT_MATCHING_BEGIN).map_err(syntax_error)?,
     };
 
     Ok(())

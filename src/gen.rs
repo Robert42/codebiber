@@ -73,7 +73,7 @@ pub type Result<T=(), E=Gen_Error> = std::result::Result<T, E>;
 #[derive(Debug, PartialEq, Eq)]
 pub enum Gen_Error
 {
-  FIND(crate::parse_file::Parse_Error),
+  PARSE(crate::parse_file::Parse_Error),
   FMT(std::fmt::Error),
   WRONG_CHECKSUM{actual: crc32::Hash, loaded: crc32::Hash},
   FORBIDDEN,
@@ -87,7 +87,7 @@ impl fmt::Display for Gen_Error
     use Gen_Error::*;
     match self
     {
-    FIND(e) => write!(f, "{e}"),
+    PARSE(e) => write!(f, "{e}"),
     FMT(e) => write!(f, "fmt error: {e}"),
     WRONG_CHECKSUM{actual, loaded} => write!(f, "wrong crc32 checksum. Was the code modified in between?\nLoaded crc32 checksum: 0x{loaded:08x}\nActual crc32 checksum: 0x{actual:08x?}"),
     FORBIDDEN => write!(f, "The code generating function modified code outside the code section"),
@@ -96,7 +96,7 @@ impl fmt::Display for Gen_Error
   }
 }
 
-impl From<crate::parse_file::Parse_Error> for Gen_Error {fn from(e: crate::parse_file::Parse_Error) -> Self {Gen_Error::FIND(e)}}
+impl From<crate::parse_file::Parse_Error> for Gen_Error {fn from(e: crate::parse_file::Parse_Error) -> Self {Gen_Error::PARSE(e)}}
 impl From<std::fmt::Error> for Gen_Error {fn from(e: std::fmt::Error) -> Self {Gen_Error::FMT(e)}}
 impl From<crate::indentation::Unindent_Error> for Gen_Error {fn from(e: crate::indentation::Unindent_Error) -> Self {Gen_Error::UNINDENT_ERROR(e)}}
 
@@ -162,7 +162,7 @@ mod test
 
     // differenet lengths
     assert_eq!(generate("<< codegen empty >>\n<< /codegen >>", gen).unwrap(), Some("<< codegen empty >>\n<< /codegen 00000000 >>\n".to_owned()));
-    assert_eq!(generate("<< codegen empty >>\n<< /codegen 00 >>", gen), Err(Gen_Error::FIND(parse_file::Parse_Error::SYNTAX(parse_file::Syntax_Error::CHECKSUM_WRONG_LENGTH))));
+    assert_eq!(generate("<< codegen empty >>\n<< /codegen 00 >>", gen), Err(Gen_Error::PARSE(parse_file::Parse_Error::SYNTAX(Error_Location{path:None, line: 1}, parse_file::Syntax_Error::CHECKSUM_WRONG_LENGTH))));
     
     // replace content
     assert_eq!(generate("<< codegen 42 >>\n<< /codegen 00000000>>", gen).unwrap(), Some("<< codegen 42 >>\n42\n<< /codegen d1862931 >>\n".to_owned()));
@@ -224,6 +224,8 @@ mod test
     assert_eq!(generate("  << codegen x >>\n  xyuz\n  <>\n    []\n  uv\n<< /codegen c1e2b1d0 >>", ignore).unwrap(), None);
     assert_eq!(generate("  << codegen x >>\n  xyuz\n  <>\n    []\n  uv\n<< /codegen >>", ignore).unwrap(), Some("  << codegen x >>\n  xyuz\n  <>\n    []\n  uv\n  << /codegen c1e2b1d0 >>\n".to_string()));
   }
+
+  use crate::parse_file::Error_Location;
 }
 
 use std::fmt;

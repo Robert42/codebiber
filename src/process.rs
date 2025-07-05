@@ -23,7 +23,20 @@ where F: Fn(&Path, &str) -> Fmt_Result,
   for path in paths
   {
     let path = path.as_ref();
-    process_file(path, &|name: &str| f(path, name))?;
+
+    let add_path_to_err = |e: Process_Error| -> Process_Error
+    {
+      use Process_Error::GEN;
+      use gen::Gen_Error::PARSE;
+      use parse_file::{Parse_Error::SYNTAX, Error_Location};
+      match e
+      {
+        GEN(PARSE(SYNTAX(Error_Location{path: None, line}, e))) => GEN(PARSE(SYNTAX(Error_Location{path: Some(path.to_owned()), line}, e))),
+        other => other,
+      }
+    };
+
+    process_file(path, &|name: &str| f(path, name)).map_err(add_path_to_err)?;
   }
 
   Ok(())
