@@ -30,13 +30,28 @@ where F: Fn(&str) -> Fmt_Result,
 
 pub type Result<T=(), E=Error> = std::result::Result<T, E>;
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug)]
 pub enum Process_Error
 {
-  #[error("{0}")]
-  IO(#[from] std::io::Error),
-  #[error("Generation error: {0}")]
-  GEN(#[from] gen::Gen_Error),
+  IO(std::io::Error),
+  GEN(gen::Gen_Error),
 }
 
+impl fmt::Display for Process_Error
+{
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
+  {
+    use Process_Error::*;
+    match self
+    {
+      IO(e) => write!(f, "{e}"),
+      GEN(e) => write!(f, "Generation error: {e}"),
+    }
+  }
+}
+
+impl From<std::io::Error> for Process_Error {fn from(e: std::io::Error) -> Self {Process_Error::IO(e)}}
+impl From<gen::Gen_Error> for Process_Error {fn from(e: gen::Gen_Error) -> Self {Process_Error::GEN(e)}}
+
 use std::path::Path;
+use std::fmt;

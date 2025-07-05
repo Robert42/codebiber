@@ -231,6 +231,3 @@ pub mod crc32;
 pub use indentation::Indentation;
 pub use gen::{generate, Fmt_Result};
 pub use process::{process_file, process_files, Process_Error as Error, Result};
-
-#[macro_use]
-extern crate thiserror;

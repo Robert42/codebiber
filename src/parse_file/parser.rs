@@ -2,20 +2,14 @@ use super::*;
 
 mod line;
 
-#[derive(Clone, Debug, Error, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Syntax_Error
 {
-  #[error("Expected identifier")]
   EXPECTED_IDENTIFIER,
-  #[error("Expected {0:?}")]
   EXPECTED_SNIPPET(&'static str),
-  #[error("Unexpected end")]
   UNEXPECTED_END,
-  #[error("Checksum has wrong length")]
   CHECKSUM_WRONG_LENGTH,
-  #[error("Nested code generatoin blocks are not supported")]
   NESTED_CODEGEN_NOT_SUPPORTED,
-  #[error("`<< /codegen` without matching `<< codegen`")]
   CODEGEN_END_WITHOUT_MATCHING_BEGIN,
 }
 
@@ -49,7 +43,7 @@ impl<'a> State_Machine<'a>
   {
     use self::line::Line;
     use State_Machine::*;
-    let line = self::line::parse(line_span)?;
+    let line = self::line::parse(line_span).map_err(Parse_Error::SYNTAX)?;
 
     let slice_join = |a, b| self::slice_join(full_code, a, b);
     
@@ -65,16 +59,16 @@ impl<'a> State_Machine<'a>
     }
     (CODEGEN{marker, identifier, code: None}, Line::CODE(span)) => CODEGEN{marker, identifier, code: Some(span)},
     (CODEGEN{marker, identifier, code: Some(code)}, Line::CODE(span)) => CODEGEN{marker, identifier, code: Some(slice_join(code, span))},
-    (CODEGEN{..}, Line::BEGIN_CODEGEN{..}) => Err(Syntax_Error::NESTED_CODEGEN_NOT_SUPPORTED)?,
+    (CODEGEN{..}, Line::BEGIN_CODEGEN{..}) => Err(Syntax_Error::NESTED_CODEGEN_NOT_SUPPORTED).map_err(Parse_Error::SYNTAX)?,
     (CODEGEN{marker: begin, identifier, code}, Line::END_CODEGEN{marker: end, checksum}) =>
     {
-      let checksum = parse_checksum(checksum)?;
+      let checksum = parse_checksum(checksum).map_err(Parse_Error::SYNTAX)?;
       let code = code.unwrap_or(&line_span[..0]);
       let code = slice_join(code, &line_span[..0]);
       sections.push(Section::CODEGEN{identifier, code, checksum, begin, end});
       NOTHING
     }
-    (_, Line::END_CODEGEN{..}) => Err(Syntax_Error::CODEGEN_END_WITHOUT_MATCHING_BEGIN)?,
+    (_, Line::END_CODEGEN{..}) => Err(Syntax_Error::CODEGEN_END_WITHOUT_MATCHING_BEGIN).map_err(Parse_Error::SYNTAX)?,
     };
 
     Ok(())
@@ -222,6 +216,23 @@ mod test
   }
 
   use Indentation as I;
+}
+
+impl fmt::Display for Syntax_Error
+{
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
+  {
+    use Syntax_Error::*;
+    match self
+    {
+    EXPECTED_IDENTIFIER => write!(f, "Expected identifier"),
+    EXPECTED_SNIPPET(s) => write!(f, "Expected {s:?}"),
+    UNEXPECTED_END => write!(f, "Unexpected end"),
+    CHECKSUM_WRONG_LENGTH => write!(f, "Checksum has wrong length"),
+    NESTED_CODEGEN_NOT_SUPPORTED => write!(f, "Nested code generatoin blocks are not supported"),
+    CODEGEN_END_WITHOUT_MATCHING_BEGIN => write!(f, "`<< /codegen` without matching `<< codegen`"),
+    }
+  }
 }
 
 use crate::indentation::Indentation;

@@ -70,20 +70,35 @@ fn check_code_checksum(code: &str, loaded_checksam: Option<crc32::Hash>) -> Resu
 
 pub type Result<T=(), E=Gen_Error> = std::result::Result<T, E>;
 
-#[derive(Debug, Error, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Gen_Error
 {
-  #[error("{0}")]
-  FIND(#[from] crate::parse_file::Parse_Error),
-  #[error("fmt error: {0}")]
-  FMT(#[from] std::fmt::Error),
-  #[error("wrong crc32 checksum. Was the code modified in between?\nLoaded crc32 checksum: 0x{loaded:08x}\nActual crc32 checksum: 0x{actual:08x?}")]
+  FIND(crate::parse_file::Parse_Error),
+  FMT(std::fmt::Error),
   WRONG_CHECKSUM{actual: crc32::Hash, loaded: crc32::Hash},
-  #[error("The code generating function modified code outside the code section")]
   FORBIDDEN,
-  #[error("The old code has a smaller indentation than the marker")]
-  UNINDENT_ERROR(#[from] crate::indentation::Unindent_Error),
+  UNINDENT_ERROR(crate::indentation::Unindent_Error),
 }
+
+impl fmt::Display for Gen_Error
+{
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
+  {
+    use Gen_Error::*;
+    match self
+    {
+    FIND(e) => write!(f, "{e}"),
+    FMT(e) => write!(f, "fmt error: {e}"),
+    WRONG_CHECKSUM{actual, loaded} => write!(f, "wrong crc32 checksum. Was the code modified in between?\nLoaded crc32 checksum: 0x{loaded:08x}\nActual crc32 checksum: 0x{actual:08x?}"),
+    FORBIDDEN => write!(f, "The code generating function modified code outside the code section"),
+    UNINDENT_ERROR(_) => write!(f, "The old code has a smaller indentation than the marker"),
+    }
+  }
+}
+
+impl From<crate::parse_file::Parse_Error> for Gen_Error {fn from(e: crate::parse_file::Parse_Error) -> Self {Gen_Error::FIND(e)}}
+impl From<std::fmt::Error> for Gen_Error {fn from(e: std::fmt::Error) -> Self {Gen_Error::FMT(e)}}
+impl From<crate::indentation::Unindent_Error> for Gen_Error {fn from(e: crate::indentation::Unindent_Error) -> Self {Gen_Error::UNINDENT_ERROR(e)}}
 
 #[cfg(test)]
 mod test

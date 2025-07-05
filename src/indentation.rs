@@ -67,11 +67,22 @@ impl fmt::Display for Indentation
   }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Error)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Unindent_Error
 {
-  #[error("Non whitespace character in indentation")]
   NON_WS_IN_INDENTATION,
+}
+
+impl fmt::Display for Unindent_Error
+{
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
+  {
+    use Unindent_Error::*;
+    match self
+    {
+    NON_WS_IN_INDENTATION => write!(f, "Non whitespace character in indentation"),
+    }
+  }
 }
 
 pub fn ensure_tailing_linebreak(mut xs: String) -> String

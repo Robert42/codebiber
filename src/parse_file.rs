@@ -10,26 +10,22 @@ pub type Result<T=(), E=Parse_Error> = std::result::Result<T, E>;
 
 pub use parser::Syntax_Error;
 
-#[derive(Clone, Debug, Error)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Parse_Error
 {
-  #[error("syntax error: {0}")]
-  SYNTAX(#[from] parser::Syntax_Error),
-  #[error("invalid crc32 checksum: {0}")]
-  INVALID_CHECKSUM(&'static str),
+  SYNTAX(parser::Syntax_Error),
 }
 
-impl PartialEq for Parse_Error
+impl fmt::Display for Parse_Error
 {
-  fn eq(&self, other: &Self) -> bool
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
   {
     use Parse_Error::*;
-    match (self, other)
+    match self
     {
-      (SYNTAX(a), SYNTAX(b)) => a == b,
-      (INVALID_CHECKSUM(a), INVALID_CHECKSUM(b)) => format!("{a}") == format!("{b}"),
-      (SYNTAX(_), _) | (INVALID_CHECKSUM(_), _) => false,
+    SYNTAX(e) => write!(f, "syntax error: {e}"),
     }
   }
 }
-impl Eq for Parse_Error {}
+
+use std::fmt;
