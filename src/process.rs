@@ -1,14 +1,14 @@
 use super::*;
 
 pub fn process_file<P, F>(path: P, f: &F) -> Result
-where F: Fn(&Path, &str) -> Fmt_Result,
+where F: Fn(&str) -> Fmt_Result,
       P: AsRef<Path>,
 {
   let path = path.as_ref();
 
   let input = std::fs::read_to_string(path)?;
 
-  if let Some(generated) = gen::generate(&input, &|name: &str| f(path, name) )?
+  if let Some(generated) = gen::generate(&input, f )?
   {
     std::fs::write(path, generated)?;
   }
@@ -22,7 +22,8 @@ where F: Fn(&Path, &str) -> Fmt_Result,
 {
   for path in paths
   {
-    process_file(path, &f)?;
+    let path = path.as_ref();
+    process_file(path, &|name: &str| f(path, name))?;
   }
 
   Ok(())
