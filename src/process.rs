@@ -6,9 +6,20 @@ where F: Fn(&str) -> Fmt_Result,
 {
   let path = path.as_ref();
 
+  let add_path_to_err = |e: gen::Gen_Error| -> gen::Gen_Error
+  {
+    use gen::Gen_Error::PARSE;
+    use parse_file::{Parse_Error::SYNTAX, Error_Location};
+    match e
+    {
+      PARSE(SYNTAX(Error_Location{path: None, line}, e)) => PARSE(SYNTAX(Error_Location{path: Some(path.to_owned()), line}, e)),
+      other => other,
+    }
+  };
+
   let input = std::fs::read_to_string(path)?;
 
-  if let Some(generated) = gen::generate(&input, f )?
+  if let Some(generated) = gen::generate(&input, f ).map_err(add_path_to_err)?
   {
     std::fs::write(path, generated)?;
   }
@@ -24,19 +35,7 @@ where F: Fn(&Path, &str) -> Fmt_Result,
   {
     let path = path.as_ref();
 
-    let add_path_to_err = |e: Process_Error| -> Process_Error
-    {
-      use Process_Error::GEN;
-      use gen::Gen_Error::PARSE;
-      use parse_file::{Parse_Error::SYNTAX, Error_Location};
-      match e
-      {
-        GEN(PARSE(SYNTAX(Error_Location{path: None, line}, e))) => GEN(PARSE(SYNTAX(Error_Location{path: Some(path.to_owned()), line}, e))),
-        other => other,
-      }
-    };
-
-    process_file(path, &|name: &str| f(path, name)).map_err(add_path_to_err)?;
+    process_file(path, &|name: &str| f(path, name))?;
   }
 
   Ok(())
