@@ -202,16 +202,6 @@ mod test
   #[test]
   fn test_checksum()
   {
-/* TODO reuse for base64 encoding? Or remove?
-    assert_eq!(hex_digit(b'0'), 0);
-    assert_eq!(hex_digit(b'9'), 9);
-    assert_eq!(hex_digit(b'a'), 10);
-    assert_eq!(hex_digit(b'f'), 15);
-    assert_eq!(hex_digit(b'A'), 10);
-    assert_eq!(hex_digit(b'F'), 15);
-    assert_eq!(u8_from_hex([b'4', b'2']), 0x42);
-*/
-
     assert_eq!(parse_checksum("").unwrap(), None);
     assert_eq!(parse_checksum("42"), Err(Syntax_Error::CHECKSUM_WRONG_LENGTH));
     assert_eq!(parse_checksum("01234567").unwrap(), Some(0x01234567));

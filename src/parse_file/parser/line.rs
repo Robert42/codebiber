@@ -56,10 +56,6 @@ pub fn parse<'a>(line: &'a str) -> Result<Line<'a>>
 
 fn parse_identifier<'a>(code: &mut &'a str) -> Result<&'a str>
 {
-  if !code.starts_with(is_identifier_char)
-  {
-    return Err(Syntax_Error::EXPECTED_IDENTIFIER)
-  }
   let index = code.rfind(">>").unwrap_or(code.len());
   let ident = &(*code)[..index].trim_end();
   let rest = &(*code)[ident.len()..];
@@ -101,19 +97,6 @@ fn eat_while<'a, P: Fn(char)->bool>(code: &mut &'a str, pred: P) -> &'a str
   return eat(code, len);
 }
 
-fn is_identifier_char(x: char) -> bool
-{
-  match x
-  {
-  '_'
-  | '0' ..= '9'
-  | 'a' ..= 'z'
-  | 'A' ..= 'Z'
-  => true,
-  _ => false,
-  }
-}
-
 #[cfg(test)]
 mod test
 {
@@ -127,8 +110,9 @@ mod test
       return Ok((ident, code));
     }
 
-    assert_eq!(parse(""), Err(Syntax_Error::EXPECTED_IDENTIFIER));
-    assert_eq!(parse(" "), Err(Syntax_Error::EXPECTED_IDENTIFIER));
+    assert_eq!(parse(""), Ok(("", "")));
+    assert_eq!(parse(" "), Ok(("", " ")));
+    assert_eq!(parse("! "), Ok(("!", " ")));
     assert_eq!(parse("x"), Ok(("x", "")));
     assert_eq!(parse("x "), Ok(("x", " ")));
     assert_eq!(parse("x, y"), Ok(("x, y", "")));
