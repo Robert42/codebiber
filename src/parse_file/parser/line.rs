@@ -60,9 +60,9 @@ fn parse_identifier<'a>(code: &mut &'a str) -> Result<&'a str>
   {
     return Err(Syntax_Error::EXPECTED_IDENTIFIER)
   }
-  let index = code.find(|x| !is_identifier_char(x)).unwrap_or(code.len());
-  let ident = &(*code)[..index];
-  let rest = &(*code)[index..];
+  let index = code.find(">>").unwrap_or(code.len());
+  let ident = &(*code)[..index].trim();
+  let rest = &(*code)[ident.len()..];
   *code = rest;
   return Ok(ident);
 }
@@ -130,7 +130,9 @@ mod test
     assert_eq!(parse(""), Err(Syntax_Error::EXPECTED_IDENTIFIER));
     assert_eq!(parse(" "), Err(Syntax_Error::EXPECTED_IDENTIFIER));
     assert_eq!(parse("x"), Ok(("x", "")));
-    assert_eq!(parse("x, y"), Ok(("x", ", y")));
+    assert_eq!(parse("x "), Ok(("x", " ")));
+    assert_eq!(parse("x, y"), Ok(("x, y", "")));
+    assert_eq!(parse("x >>"), Ok(("x", " >>")));
   }
 
   #[test]
